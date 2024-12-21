@@ -1,3 +1,27 @@
+// הגדרות Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyBJtLGpP5-b8e3wAJ_QC_uJIFWCF2_eKhI",
+    authDomain: "expense-tracker-5780.firebaseapp.com",
+    projectId: "expense-tracker-5780",
+    storageBucket: "expense-tracker-5780.appspot.com",
+    messagingSenderId: "820518007437",
+    appId: "1:820518007437:web:2f3b0e3f3b0e3f3b0e3f3b"
+};
+
+// אתחול Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// מצב המסכים
+const loginScreen = document.getElementById('loginScreen');
+const registerScreen = document.getElementById('registerScreen');
+const mainApp = document.getElementById('mainApp');
+const settingsModal = document.getElementById('settingsModal');
+
+// משתני משתמש גלובליים
+let currentUser = null;
+let userSettings = null;
+
 // הגדרת קטגוריות קבועות
 const CATEGORIES = {
     'הוצאות קבועות': [
@@ -25,26 +49,176 @@ const CATEGORIES = {
 
 // אתחול המערכת
 document.addEventListener('DOMContentLoaded', () => {
-    updateCategories(); // קריאה ראשונית לעדכון קטגוריות
-    setDefaultDate();
-    loadBudgets();
-    updateDisplay();
+    // מאזיני אירועים עבור טפסים
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+    document.getElementById('registerForm')?.addEventListener('submit', handleRegister);
+    document.getElementById('settingsForm')?.addEventListener('submit', handleSettingsSave);
+    document.getElementById('showRegister')?.addEventListener('click', () => toggleScreens('register'));
+    document.getElementById('showLogin')?.addEventListener('click', () => toggleScreens('login'));
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+    document.getElementById('settingsBtn')?.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    document.getElementById('closeSettings')?.addEventListener('click', () => settingsModal.classList.add('hidden'));
 
-    // הוספת מאזיני אירועים
-    document.getElementById('expenseForm').addEventListener('submit', addExpense);
-    document.getElementById('expenseType').addEventListener('change', updateCategories);
-    document.getElementById('fixedBudget').addEventListener('change', saveBudgets);
-    document.getElementById('variableBudget').addEventListener('change', saveBudgets);
+    // מאזיני אירועים עבור האפליקציה
+    document.getElementById('expenseForm')?.addEventListener('submit', addExpense);
+    document.getElementById('expenseType')?.addEventListener('change', updateCategories);
+    document.getElementById('fixedBudget')?.addEventListener('change', saveBudgets);
+    document.getElementById('variableBudget')?.addEventListener('change', saveBudgets);
+
+    // בדיקת מצב התחברות
+    auth.onAuthStateChanged(handleAuthStateChanged);
 });
 
-// עדכון קטגוריות לפי סוג ההוצאה
+// פונקציות אימות משתמשים
+async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        toggleScreens('main');
+    } catch (error) {
+        alert('שגיאה בהתחברות: ' + error.message);
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    const name = document.getElementById('registerName').value;
+
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        await userCredential.user.updateProfile({ displayName: name });
+        await saveUserSettings({ name, theme: 'light' });
+        toggleScreens('main');
+    } catch (error) {
+        alert('שגיאה בהרשמה: ' + error.message);
+    }
+}
+
+async function handleLogout() {
+    try {
+        await auth.signOut();
+        toggleScreens('login');
+    } catch (error) {
+        alert('שגיאה בהתנתקות: ' + error.message);
+    }
+}
+
+function handleAuthStateChanged(user) {
+    currentUser = user;
+    if (user) {
+        loadUserSettings();
+        document.getElementById('userDisplayName').textContent = user.displayName || 'משתמש';
+        toggleScreens('main');
+        loadData();
+    } else {
+        toggleScreens('login');
+    }
+}
+
+// פונקציות ניווט
+function toggleScreens(screen) {
+    loginScreen.classList.add('hidden');
+    registerScreen.classList.add('hidden');
+    mainApp.classList.add('hidden');
+    settingsModal.classList.add('hidden');
+
+    switch(screen) {
+        case 'login':
+            loginScreen.classList.remove('hidden');
+            break;
+        case 'register':
+            registerScreen.classList.remove('hidden');
+            break;
+        case 'main':
+            mainApp.classList.remove('hidden');
+            break;
+    }
+}
+
+// פונקציות הגדרות משתמש
+async function saveUserSettings(settings) {
+    if (!currentUser) return;
+    userSettings = settings;
+    localStorage.setItem(`settings_${currentUser.uid}`, JSON.stringify(settings));
+}
+
+function loadUserSettings() {
+    if (!currentUser) return;
+    const settings = localStorage.getItem(`settings_${currentUser.uid}`);
+    if (settings) {
+        userSettings = JSON.parse(settings);
+        applyUserSettings();
+    }
+}
+
+function applyUserSettings() {
+    if (!userSettings) return;
+    document.getElementById('settingsName').value = userSettings.name || '';
+    document.getElementById('settingsTheme').value = userSettings.theme || 'light';
+    document.body.classList.toggle('dark-theme', userSettings.theme === 'dark');
+}
+
+async function handleSettingsSave(e) {
+    e.preventDefault();
+    const name = document.getElementById('settingsName').value;
+    const theme = document.getElementById('settingsTheme').value;
+    
+    await saveUserSettings({ name, theme });
+    await currentUser.updateProfile({ displayName: name });
+    document.getElementById('userDisplayName').textContent = name;
+    settingsModal.classList.add('hidden');
+    applyUserSettings();
+}
+// פונקציות ניהול נתונים
+function loadData() {
+    if (!currentUser) return;
+    
+    const userId = currentUser.uid;
+    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
+    const fixedBudget = localStorage.getItem(`fixedBudget_${userId}`) || '0';
+    const variableBudget = localStorage.getItem(`variableBudget_${userId}`) || '0';
+    
+    document.getElementById('fixedBudget').value = fixedBudget;
+    document.getElementById('variableBudget').value = variableBudget;
+    
+    updateCategories();
+    setDefaultDate();
+    updateDisplay(expenses);
+}
+
+function saveData(expenses) {
+    if (!currentUser) return;
+    localStorage.setItem(`expenses_${currentUser.uid}`, JSON.stringify(expenses));
+}
+
+function saveBudgets() {
+    if (!currentUser) return;
+    const userId = currentUser.uid;
+    const fixedBudget = document.getElementById('fixedBudget').value;
+    const variableBudget = document.getElementById('variableBudget').value;
+    
+    localStorage.setItem(`fixedBudget_${userId}`, fixedBudget);
+    localStorage.setItem(`variableBudget_${userId}`, variableBudget);
+    updateDisplay(JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]'));
+}
+
+// פונקציות אפליקציה
+function setDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+}
+
 function updateCategories() {
     const type = document.getElementById('expenseType').value;
     const categorySelect = document.getElementById('category');
-    categorySelect.innerHTML = ''; // ניקוי הקטגוריות הקיימות
+    categorySelect.innerHTML = ''; // ניקוי אפשרויות קיימות
     
-    const relevantCategories = CATEGORIES[type] || [];
-    relevantCategories.forEach(cat => {
+    CATEGORIES[type].forEach(cat => {
         const option = document.createElement('option');
         option.value = cat;
         option.textContent = cat;
@@ -52,89 +226,54 @@ function updateCategories() {
     });
 }
 
-// הגדרת תאריך ברירת מחדל
-function setDefaultDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-}
-
-// שמירת תקציבים
-function saveBudgets() {
-    const fixedBudget = Number(document.getElementById('fixedBudget').value) || 0;
-    const variableBudget = Number(document.getElementById('variableBudget').value) || 0;
-    
-    localStorage.setItem('fixedBudget', fixedBudget.toString());
-    localStorage.setItem('variableBudget', variableBudget.toString());
-    updateDisplay();
-}
-
-// טעינת תקציבים
-function loadBudgets() {
-    const fixedBudget = localStorage.getItem('fixedBudget') || '0';
-    const variableBudget = localStorage.getItem('variableBudget') || '0';
-    
-    document.getElementById('fixedBudget').value = fixedBudget;
-    document.getElementById('variableBudget').value = variableBudget;
-}
-
-// הוספת הוצאה חדשה
 function addExpense(e) {
     e.preventDefault();
-    
-    const type = document.getElementById('expenseType').value;
-    const category = document.getElementById('category').value;
-    const amount = Number(document.getElementById('amount').value);
-    const date = document.getElementById('date').value;
-    const description = document.getElementById('description').value;
+    if (!currentUser) return;
 
-    if (!amount || amount <= 0) {
+    const userId = currentUser.uid;
+    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
+    
+    const newExpense = {
+        id: Date.now(),
+        type: document.getElementById('expenseType').value,
+        category: document.getElementById('category').value,
+        amount: Number(document.getElementById('amount').value),
+        date: document.getElementById('date').value,
+        description: document.getElementById('description').value
+    };
+
+    if (!newExpense.amount || newExpense.amount <= 0) {
         alert('נא להזין סכום תקין');
         return;
     }
 
-    if (!category) {
-        alert('נא לבחור קטגוריה');
-        return;
-    }
-
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    const newExpense = {
-        id: Date.now(),
-        type,
-        category,
-        amount,
-        date,
-        description
-    };
-
     expenses.push(newExpense);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
+    saveData(expenses);
     
     e.target.reset();
     setDefaultDate();
     updateCategories();
-    updateDisplay();
+    updateDisplay(expenses);
 }
 
-// מחיקת הוצאה
 function deleteExpense(id) {
-    if (!confirm('האם למחוק הוצאה זו?')) return;
+    if (!currentUser || !confirm('האם למחוק הוצאה זו?')) return;
+
+    const userId = currentUser.uid;
+    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
+    const updatedExpenses = expenses.filter(exp => exp.id !== id);
     
-    let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    expenses = expenses.filter(exp => exp.id !== id);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-    updateDisplay();
+    saveData(updatedExpenses);
+    updateDisplay(updatedExpenses);
 }
 
-// עדכון התצוגה
-function updateDisplay() {
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+// פונקציות תצוגה
+function updateDisplay(expenses) {
     updateExpenseList(expenses);
     updateStats(expenses);
     updateChart(expenses);
 }
 
-// עדכון רשימת ההוצאות
 function updateExpenseList(expenses) {
     const expenseList = document.getElementById('expenseList');
     if (!expenseList) return;
@@ -157,13 +296,13 @@ function updateExpenseList(expenses) {
         `).join('');
 }
 
-// עדכון סטטיסטיקות
 function updateStats(expenses) {
     const monthlyStats = document.getElementById('monthlyStats');
     if (!monthlyStats) return;
 
-    const fixedBudget = Number(localStorage.getItem('fixedBudget')) || 0;
-    const variableBudget = Number(localStorage.getItem('variableBudget')) || 0;
+    const userId = currentUser.uid;
+    const fixedBudget = Number(localStorage.getItem(`fixedBudget_${userId}`)) || 0;
+    const variableBudget = Number(localStorage.getItem(`variableBudget_${userId}`)) || 0;
     
     const totalFixed = expenses
         .filter(exp => exp.type === 'הוצאות קבועות')
@@ -231,7 +370,6 @@ function updateStats(expenses) {
     `;
 }
 
-// עדכון גרף
 function updateChart(expenses) {
     const ctx = document.getElementById('expenseChart');
     if (!ctx) return;
@@ -271,9 +409,7 @@ function updateChart(expenses) {
                 legend: {
                     position: 'right',
                     labels: {
-                        font: {
-                            size: 12
-                        }
+                        font: { size: 12 }
                     }
                 }
             }
@@ -281,9 +417,12 @@ function updateChart(expenses) {
     });
 }
 
-// ייצוא לאקסל
+// פונקציות ייצוא
 function exportToExcel() {
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+    if (!currentUser) return;
+    
+    const userId = currentUser.uid;
+    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
     if (expenses.length === 0) {
         alert('אין נתונים לייצוא');
         return;
@@ -297,9 +436,11 @@ function exportToExcel() {
     XLSX.writeFile(workbook, fileName);
 }
 
-// ייצוא ל-PDF
 function exportToPDF() {
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+    if (!currentUser) return;
+    
+    const userId = currentUser.uid;
+    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
     if (expenses.length === 0) {
         alert('אין נתונים לייצוא');
         return;

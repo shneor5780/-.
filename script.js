@@ -173,8 +173,7 @@ async function handleSettingsSave(e) {
     document.getElementById('userDisplayName').textContent = name;
     settingsModal.classList.add('hidden');
     applyUserSettings();
-}
-// פונקציות ניהול נתונים
+}// פונקציות ניהול נתונים
 function loadData() {
     if (!currentUser) return;
     

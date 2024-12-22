@@ -241,8 +241,7 @@ function updateCategories(type) {
         option.textContent = category;
         categorySelect.appendChild(option);
     });
-}
-// פונקציות הוצאות והכנסות
+}// פונקציות הוצאות והכנסות
 function updateDisplay() {
     const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
     const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');

@@ -242,3 +242,165 @@ function updateCategories(type) {
         categorySelect.appendChild(option);
     });
 }
+// פונקציות הוצאות והכנסות
+function updateDisplay() {
+    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
+    
+    // עדכון טבלת הוצאות
+    const expensesList = document.getElementById('expensesList');
+    if (expensesList) {
+        expensesList.innerHTML = '';
+        expenses.forEach((expense, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="border p-2">${expense.date}</td>
+                <td class="border p-2">${expense.type}</td>
+                <td class="border p-2">${expense.category}</td>
+                <td class="border p-2">${expense.amount.toLocaleString()} ₪</td>
+                <td class="border p-2">${expense.description || ''}</td>
+                <td class="border p-2">
+                    <button onclick="deleteExpense(${index})" class="bg-red-500 text-white px-2 py-1 rounded">
+                        מחק
+                    </button>
+                </td>
+            `;
+            expensesList.appendChild(row);
+        });
+    }
+    
+    // עדכון טבלת הכנסות
+    const incomesList = document.getElementById('incomesList');
+    if (incomesList) {
+        incomesList.innerHTML = '';
+        incomes.forEach((income, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="border p-2">${income.date}</td>
+                <td class="border p-2">${income.source}</td>
+                <td class="border p-2">${income.amount.toLocaleString()} ₪</td>
+                <td class="border p-2">${income.description || ''}</td>
+                <td class="border p-2">
+                    <button onclick="deleteIncome(${index})" class="bg-red-500 text-white px-2 py-1 rounded">
+                        מחק
+                    </button>
+                </td>
+            `;
+            incomesList.appendChild(row);
+        });
+    }
+    
+    // עדכון סיכומים
+    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const totalIncomes = incomes.reduce((sum, income) => sum + income.amount, 0);
+    const balance = totalIncomes - totalExpenses;
+    
+    const summaryElements = {
+        totalExpenses: document.getElementById('totalExpenses'),
+        totalIncomes: document.getElementById('totalIncomes'),
+        balance: document.getElementById('balance')
+    };
+    
+    if (summaryElements.totalExpenses) {
+        summaryElements.totalExpenses.textContent = totalExpenses.toLocaleString() + ' ₪';
+        summaryElements.totalExpenses.className = 'text-red-500 font-bold';
+    }
+    
+    if (summaryElements.totalIncomes) {
+        summaryElements.totalIncomes.textContent = totalIncomes.toLocaleString() + ' ₪';
+        summaryElements.totalIncomes.className = 'text-green-500 font-bold';
+    }
+    
+    if (summaryElements.balance) {
+        summaryElements.balance.textContent = balance.toLocaleString() + ' ₪';
+        summaryElements.balance.className = balance >= 0 ? 'text-green-500 font-bold' : 'text-red-500 font-bold';
+    }
+}// פונקציות הוספה ומחיקה
+function addExpense(e) {
+    e.preventDefault();
+    
+    const expense = {
+        type: document.getElementById('expenseType').value,
+        category: document.getElementById('expenseCategory').value,
+        amount: Number(document.getElementById('expenseAmount').value),
+        date: document.getElementById('expenseDate').value,
+        description: document.getElementById('expenseDescription').value
+    };
+
+    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+    expenses.push(expense);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    
+    saveUserData();
+    updateDisplay();
+    e.target.reset();
+    showNotification('ההוצאה נוספה בהצלחה', 'success');
+}
+
+function addIncome(e) {
+    e.preventDefault();
+    
+    const income = {
+        source: document.getElementById('incomeSource').value,
+        amount: Number(document.getElementById('incomeAmount').value),
+        date: document.getElementById('incomeDate').value,
+        description: document.getElementById('incomeDescription').value
+    };
+
+    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
+    incomes.push(income);
+    localStorage.setItem('incomes', JSON.stringify(incomes));
+    
+    saveUserData();
+    updateDisplay();
+    e.target.reset();
+    showNotification('ההכנסה נוספה בהצלחה', 'success');
+}
+
+function deleteExpense(index) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק הוצאה זו?')) return;
+    
+    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+    expenses.splice(index, 1);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    
+    saveUserData();
+    updateDisplay();
+    showNotification('ההוצאה נמחקה בהצלחה', 'success');
+}
+
+function deleteIncome(index) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק הכנסה זו?')) return;
+    
+    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
+    incomes.splice(index, 1);
+    localStorage.setItem('incomes', JSON.stringify(incomes));
+    
+    saveUserData();
+    updateDisplay();
+    showNotification('ההכנסה נמחקה בהצלחה', 'success');
+}
+
+// אתחול האפליקציה
+document.addEventListener('DOMContentLoaded', () => {
+    initAuth();
+    setupSettings();
+    
+    // טפסים
+    const forms = {
+        expense: document.getElementById('expenseForm'),
+        income: document.getElementById('incomeForm'),
+        goal: document.getElementById('goalForm')
+    };
+    
+    if (forms.expense) forms.expense.addEventListener('submit', addExpense);
+    if (forms.income) forms.income.addEventListener('submit', addIncome);
+    if (forms.goal) forms.goal.addEventListener('submit', addGoal);
+    
+    // עדכון קטגוריות
+    const expenseType = document.getElementById('expenseType');
+    if (expenseType) {
+        updateCategories('הוצאות קבועות');
+        expenseType.addEventListener('change', (e) => updateCategories(e.target.value));
+    }
+});

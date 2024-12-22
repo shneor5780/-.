@@ -29,6 +29,7 @@ let currentUser = null;
 let userSettings = {
     theme: 'light',
     fontSize: 'medium',
+    layout: 'tabs',
     notifyExpenses: true,
     notifyGoals: true
 };
@@ -36,7 +37,7 @@ let userSettings = {
 // פונקציות עזר
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
+    notification.className = `notification ${
         type === 'error' ? 'bg-red-500' : 
         type === 'success' ? 'bg-green-500' : 
         'bg-blue-500'
@@ -49,29 +50,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// פונקציית ניווט בלשוניות
-function setupTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // הסרת הפעיל מכל הלשוניות
-            tabBtns.forEach(b => b.classList.remove('active', 'bg-blue-500', 'text-white'));
-            tabContents.forEach(c => c.classList.add('hidden'));
-            
-            // הוספת פעיל ללשונית הנבחרת
-            btn.classList.add('active', 'bg-blue-500', 'text-white');
-            const tabId = btn.dataset.tab;
-            document.getElementById(tabId).classList.remove('hidden');
-        });
-    });
-
-    // הפעלת הלשונית הראשונה כברירת מחדל
-    if (tabBtns.length > 0) {
-        tabBtns[0].click();
-    }
-}// פונקציות אימות
+// פונקציות אימות
 function initAuth() {
     const container = document.querySelector('.container');
     const authModal = document.getElementById('authModal');
@@ -94,9 +73,7 @@ function initAuth() {
                 showNotification('שגיאת התחברות: ' + error.message, 'error');
             }
         });
-    }
-
-    // כפתור הרשמה
+    }    // כפתור הרשמה
     const registerBtn = document.getElementById('registerBtn');
     if (registerBtn) {
         registerBtn.addEventListener('click', async () => {
@@ -149,7 +126,9 @@ function initAuth() {
             if (container) container.style.display = 'none';
         }
     });
-}// פונקציות Firestore
+}
+
+// פונקציות Firestore
 async function loadUserData() {
     if (!currentUser) return;
     
@@ -165,7 +144,6 @@ async function loadUserData() {
     }
     
     updateDisplay();
-    updateGoalsList();
 }
 
 async function saveUserData() {
@@ -191,9 +169,7 @@ async function loadUserSettings() {
         userSettings = { ...userSettings, ...settingsDoc.data() };
         applySettings();
     }
-}
-
-async function saveUserSettings() {
+}async function saveUserSettings() {
     if (!currentUser) return;
     
     const db = firebase.firestore();
@@ -202,15 +178,28 @@ async function saveUserSettings() {
 
 function applySettings() {
     // ערכת נושא
-    if (userSettings.theme === 'dark') {
-        document.body.classList.add('dark-theme');
-    } else {
-        document.body.classList.remove('dark-theme');
-    }
+    document.body.classList.remove('light-theme', 'dark-theme');
+    document.body.classList.add(`${userSettings.theme}-theme`);
     
     // גודל טקסט
     document.body.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
     document.body.classList.add(`font-size-${userSettings.fontSize}`);
+    
+    // לייאאוט
+    const container = document.querySelector('.container');
+    if (container) {
+        if (userSettings.layout === 'scroll') {
+            container.classList.add('scroll-layout');
+            container.classList.remove('tabs-layout');
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('hidden');
+            });
+        } else {
+            container.classList.remove('scroll-layout');
+            container.classList.add('tabs-layout');
+            setupTabs();
+        }
+    }
 }
 
 function setupSettings() {
@@ -219,225 +208,82 @@ function setupSettings() {
     const closeSettings = document.getElementById('closeSettings');
     const settingsForm = document.getElementById('settingsForm');
 
-    // פתיחת מודל ההגדרות
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
-            // טעינת ההגדרות הנוכחיות לטופס
-            if (settingsForm) {
-                const themeSelect = document.getElementById('settingsTheme');
-                const fontSelect = document.getElementById('settingsFontSize');
-                const notifyExpenses = document.getElementById('settingsNotifyExpenses');
-                const notifyGoals = document.getElementById('settingsNotifyGoals');
+            const themeSelect = document.getElementById('settingsTheme');
+            const fontSelect = document.getElementById('settingsFontSize');
+            const layoutSelect = document.getElementById('settingsLayout');
+            const notifyExpenses = document.getElementById('settingsNotifyExpenses');
+            const notifyGoals = document.getElementById('settingsNotifyGoals');
 
-                if (themeSelect) themeSelect.value = userSettings.theme;
-                if (fontSelect) fontSelect.value = userSettings.fontSize;
-                if (notifyExpenses) notifyExpenses.checked = userSettings.notifyExpenses;
-                if (notifyGoals) notifyGoals.checked = userSettings.notifyGoals;
-            }
+            if (themeSelect) themeSelect.value = userSettings.theme;
+            if (fontSelect) fontSelect.value = userSettings.fontSize;
+            if (layoutSelect) layoutSelect.value = userSettings.layout;
+            if (notifyExpenses) notifyExpenses.checked = userSettings.notifyExpenses;
+            if (notifyGoals) notifyGoals.checked = userSettings.notifyGoals;
+            
             settingsModal.classList.remove('hidden');
         });
-    }    // סגירת מודל ההגדרות
+    }
+    
     if (closeSettings && settingsModal) {
         closeSettings.addEventListener('click', () => {
             settingsModal.classList.add('hidden');
         });
-
-        // סגירה בלחיצה מחוץ למודל
-        settingsModal.addEventListener('click', (e) => {
-            if (e.target === settingsModal) {
-                settingsModal.classList.add('hidden');
-            }
-        });
     }
     
-    // שמירת הגדרות
     if (settingsForm) {
         settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            userSettings = {
+            const newSettings = {
                 theme: document.getElementById('settingsTheme').value,
                 fontSize: document.getElementById('settingsFontSize').value,
+                layout: document.getElementById('settingsLayout').value,
                 notifyExpenses: document.getElementById('settingsNotifyExpenses')?.checked || false,
                 notifyGoals: document.getElementById('settingsNotifyGoals')?.checked || false
             };
             
+            userSettings = newSettings;
             await saveUserSettings();
             applySettings();
+            
             settingsModal.classList.add('hidden');
             showNotification('ההגדרות נשמרו בהצלחה', 'success');
         });
     }
 }
 
-// פונקציות עדכון תצוגה
-function updateCategories(type) {
-    const categorySelect = document.getElementById('expenseCategory');
-    if (!categorySelect) return;
+// פונקציית ניווט בלשוניות
+function setupTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
     
-    categorySelect.innerHTML = '';
-    categories[type].forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active', 'bg-blue-500', 'text-white'));
+            tabContents.forEach(c => c.classList.add('hidden'));
+            
+            btn.classList.add('active', 'bg-blue-500', 'text-white');
+            const tabId = btn.dataset.tab;
+            const selectedTab = document.getElementById(tabId);
+            if (selectedTab) {
+                selectedTab.classList.remove('hidden');
+            }
+        });
     });
-}
 
-function updateDisplay() {
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
-    
-    // עדכון טבלת הוצאות
-    const expensesList = document.getElementById('expensesList');
-    if (expensesList) {
-        expensesList.innerHTML = '';
-        expenses.forEach((expense, index) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="border p-2">${expense.date}</td>
-                <td class="border p-2">${expense.type}</td>
-                <td class="border p-2">${expense.category}</td>
-                <td class="border p-2">${expense.amount.toLocaleString()} ₪</td>
-                <td class="border p-2">${expense.description || ''}</td>
-                <td class="border p-2">
-                    <button onclick="deleteExpense(${index})" class="bg-red-500 text-white px-2 py-1 rounded">
-                        מחק
-                    </button>
-                </td>
-            `;
-            expensesList.appendChild(row);
-        });
-    }    // עדכון טבלת הכנסות
-    const incomesList = document.getElementById('incomesList');
-    if (incomesList) {
-        incomesList.innerHTML = '';
-        incomes.forEach((income, index) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="border p-2">${income.date}</td>
-                <td class="border p-2">${income.source}</td>
-                <td class="border p-2">${income.amount.toLocaleString()} ₪</td>
-                <td class="border p-2">${income.description || ''}</td>
-                <td class="border p-2">
-                    <button onclick="deleteIncome(${index})" class="bg-red-500 text-white px-2 py-1 rounded">
-                        מחק
-                    </button>
-                </td>
-            `;
-            incomesList.appendChild(row);
-        });
+    // הפעלת הלשונית הראשונה כברירת מחדל
+    if (tabBtns.length > 0) {
+        tabBtns[0].click();
     }
-    
-    // עדכון סיכומים
-    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const totalIncomes = incomes.reduce((sum, income) => sum + income.amount, 0);
-    const balance = totalIncomes - totalExpenses;
-    
-    const summaryElements = {
-        totalExpenses: document.getElementById('totalExpenses'),
-        totalIncomes: document.getElementById('totalIncomes'),
-        balance: document.getElementById('balance')
-    };
-    
-    if (summaryElements.totalExpenses) {
-        summaryElements.totalExpenses.textContent = totalExpenses.toLocaleString() + ' ₪';
-        summaryElements.totalExpenses.className = 'text-red-500 font-bold';
-    }
-    
-    if (summaryElements.totalIncomes) {
-        summaryElements.totalIncomes.textContent = totalIncomes.toLocaleString() + ' ₪';
-        summaryElements.totalIncomes.className = 'text-green-500 font-bold';
-    }
-    
-    if (summaryElements.balance) {
-        summaryElements.balance.textContent = balance.toLocaleString() + ' ₪';
-        summaryElements.balance.className = balance >= 0 ? 'text-green-500 font-bold' : 'text-red-500 font-bold';
-    }
-}
-
-// פונקציות הוספה ומחיקה
-function addExpense(e) {
-    e.preventDefault();
-    
-    const expense = {
-        type: document.getElementById('expenseType').value,
-        category: document.getElementById('expenseCategory').value,
-        amount: Number(document.getElementById('expenseAmount').value),
-        date: document.getElementById('expenseDate').value,
-        description: document.getElementById('expenseDescription').value
-    };
-
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    expenses.push(expense);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-    
-    saveUserData();
-    updateDisplay();
-    e.target.reset();
-    showNotification('ההוצאה נוספה בהצלחה', 'success');
-}
-
-function addIncome(e) {
-    e.preventDefault();
-    
-    const income = {
-        source: document.getElementById('incomeSource').value,
-        amount: Number(document.getElementById('incomeAmount').value),
-        date: document.getElementById('incomeDate').value,
-        description: document.getElementById('incomeDescription').value
-    };
-
-    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
-    incomes.push(income);
-    localStorage.setItem('incomes', JSON.stringify(incomes));
-    
-    saveUserData();
-    updateDisplay();
-    e.target.reset();
-    showNotification('ההכנסה נוספה בהצלחה', 'success');
-}
-
-function deleteExpense(index) {
-    if (!confirm('האם אתה בטוח שברצונך למחוק הוצאה זו?')) return;
-    
-    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    expenses.splice(index, 1);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-    
-    saveUserData();
-    updateDisplay();
-    showNotification('ההוצאה נמחקה בהצלחה', 'success');
-}
-
-function deleteIncome(index) {
-    if (!confirm('האם אתה בטוח שברצונך למחוק הכנסה זו?')) return;
-    
-    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
-    incomes.splice(index, 1);
-    localStorage.setItem('incomes', JSON.stringify(incomes));
-    
-    saveUserData();
-    updateDisplay();
-    showNotification('ההכנסה נמחקה בהצלחה', 'success');
 }
 
 // אתחול האפליקציה
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     setupSettings();
-    setupTabs();
     
-    // טפסים
-    const forms = {
-        expense: document.getElementById('expenseForm'),
-        income: document.getElementById('incomeForm')
-    };
-    
-    if (forms.expense) forms.expense.addEventListener('submit', addExpense);
-    if (forms.income) forms.income.addEventListener('submit', addIncome);
-    
-    // עדכון קטגוריות
     const expenseType = document.getElementById('expenseType');
     if (expenseType) {
         updateCategories('הוצאות קבועות');

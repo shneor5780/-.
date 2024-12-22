@@ -10,3 +10,7 @@ const firebaseConfig = {
 
 // אתחול Firebase
 firebase.initializeApp(firebaseConfig);
+
+// הפעלת שירותי אימות
+const auth = firebase.auth();
+const db = firebase.firestore();

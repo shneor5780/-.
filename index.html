@@ -3,341 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ניהול תקציב משפחתי</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4CAF50">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <title>מעקב הוצאות והכנסות</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
-    <!-- Excel Export -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Firebase Config -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
     
-    <!-- PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
-    <script src="firebase-config.js"></script>
-
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
+<body class="light-theme font-size-medium">
     <!-- מודל התחברות -->
-    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full">
-            <h2 class="text-2xl font-bold mb-6 text-center">התחברות למערכת</h2>
+    <div id="authModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">התחברות</h2>
             <form id="authForm" class="space-y-4">
                 <div>
-                    <label class="block mb-1">אימייל</label>
-                    <input type="email" id="authEmail" class="w-full p-2 border rounded" required>
+                    <label for="authEmail" class="block mb-1">אימייל:</label>
+                    <input type="email" id="authEmail" required class="w-full p-2 border rounded">
                 </div>
                 <div>
-                    <label class="block mb-1">סיסמה</label>
-                    <input type="password" id="authPassword" class="w-full p-2 border rounded" required>
+                    <label for="authPassword" class="block mb-1">סיסמה:</label>
+                    <input type="password" id="authPassword" required class="w-full p-2 border rounded">
                 </div>
-                <div class="flex space-x-4 space-x-reverse">
-                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">התחבר</button>
-                    <button type="button" id="registerBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">הרשמה</button>
+                <div class="flex space-x-4">
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">התחבר</button>
+                    <button type="button" id="registerBtn" class="bg-green-500 text-white px-4 py-2 rounded">הרשם</button>
+                    <button type="button" id="googleAuthBtn" class="bg-red-500 text-white px-4 py-2 rounded">
+                        התחבר עם Google
+                    </button>
                 </div>
-                <button type="button" id="googleAuthBtn" class="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 mt-4">
-                    התחבר עם Google
+            </form>
+        </div>
+    </div>
+        <!-- מודל הגדרות -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">הגדרות</h2>
+                <button id="closeSettings" class="text-gray-500 hover:text-gray-700">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+            <form id="settingsForm" class="space-y-4">
+                <div>
+                    <label for="settingsTheme" class="block mb-1">ערכת נושא:</label>
+                    <select id="settingsTheme" class="w-full p-2 border rounded">
+                        <option value="light">בהיר</option>
+                        <option value="dark">כהה</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="settingsFontSize" class="block mb-1">גודל טקסט:</label>
+                    <select id="settingsFontSize" class="w-full p-2 border rounded">
+                        <option value="small">קטן</option>
+                        <option value="medium">בינוני</option>
+                        <option value="large">גדול</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="settingsLayout" class="block mb-1">תצוגת האתר:</label>
+                    <select id="settingsLayout" class="w-full p-2 border rounded">
+                        <option value="tabs">לשוניות</option>
+                        <option value="scroll">גלילה</option>
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="settingsNotifyExpenses" class="ml-2">
+                    <label for="settingsNotifyExpenses">התראות על הוצאות חריגות</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="settingsNotifyGoals" class="ml-2">
+                    <label for="settingsNotifyGoals">התראות על יעדים</label>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white px-4 py-2 rounded">
+                    שמור הגדרות
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- תפריט ראשי -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-xl font-bold">ניהול תקציב</span>
-                    <span id="userName" class="mr-4 text-gray-600"></span>
-                </div>
-                <div class="flex items-center space-x-4 space-x-reverse">
-                    <button id="settingsBtn" class="text-gray-600 hover:text-gray-900">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                    </button>
-                    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">התנתק</button>
-                </div>
-            </div>
-        </div>
-    </nav>
-
     <!-- תוכן ראשי -->
     <div class="container mx-auto px-4 py-8">
-        <!-- לשוניות -->
-        <div class="mb-8">
-            <div class="border-b border-gray-200">
-                <nav class="flex -mb-px">
-                    <button class="tab-btn active" data-tab="overview">סקירה כללית</button>
-                    <button class="tab-btn" data-tab="expenses">הוצאות</button>
-                    <button class="tab-btn" data-tab="incomes">הכנסות</button>
-                    <button class="tab-btn" data-tab="goals">מטרות חיסכון</button>
-                </nav>
+        <!-- כותרת וניווט -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">מעקב הוצאות והכנסות</h1>
+            <div class="flex items-center space-x-4">
+                <span id="userName" class="text-gray-600"></span>
+                <button id="settingsBtn" class="bg-gray-500 text-white px-4 py-2 rounded">
+                    הגדרות
+                </button>
+                <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded">
+                    התנתק
+                </button>
             </div>
         </div>
-
-        <!-- תוכן הלשוניות -->
-        <div id="overview" class="tab-content active">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- סיכום -->
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-4">סיכום</h3>
-                    <select id="summaryType" class="mb-4 p-2 border rounded">
-                        <option value="daily">היום</option>
-                        <option value="weekly">השבוע</option>
-                        <option value="monthly" selected>החודש</option>
-                    </select>
-                    <div id="summaryStats"></div>
-                </div>
-
-                <!-- תרשים -->
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-4">התפלגות הוצאות</h3>
-                    <canvas id="expenseChart"></canvas>
-                </div>
-            </div>
+                <!-- כפתורי ניווט -->
+        <div class="tab-buttons flex space-x-4 mb-8">
+            <button class="tab-btn px-4 py-2 rounded" data-tab="expensesTab">הוצאות</button>
+            <button class="tab-btn px-4 py-2 rounded" data-tab="incomesTab">הכנסות</button>
+            <button class="tab-btn px-4 py-2 rounded" data-tab="summaryTab">סיכום</button>
         </div>
 
-        <div id="expenses" class="tab-content hidden">
-            <!-- טופס הוצאה -->
-            <div class="bg-white p-6 rounded-lg shadow mb-8">
-                <h3 class="text-xl font-bold mb-4">הוספת הוצאה</h3>
-                <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- לשונית הוצאות -->
+        <div id="expensesTab" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">הוספת הוצאה</h2>
+            <form id="expenseForm" class="bg-white p-4 rounded shadow mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block mb-1">סוג הוצאה</label>
-                        <select id="expenseType" class="w-full p-2 border rounded" required>
+                        <label for="expenseType" class="block mb-1">סוג הוצאה:</label>
+                        <select id="expenseType" required class="w-full p-2 border rounded">
                             <option value="הוצאות קבועות">הוצאות קבועות</option>
                             <option value="הוצאות משתנות">הוצאות משתנות</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block mb-1">קטגוריה</label>
-                        <select id="category" class="w-full p-2 border rounded" required></select>
+                        <label for="expenseCategory" class="block mb-1">קטגוריה:</label>
+                        <select id="expenseCategory" required class="w-full p-2 border rounded"></select>
                     </div>
                     <div>
-                        <label class="block mb-1">סכום</label>
-                        <input type="number" id="amount" class="w-full p-2 border rounded" required>
+                        <label for="expenseAmount" class="block mb-1">סכום:</label>
+                        <input type="number" id="expenseAmount" required class="w-full p-2 border rounded">
                     </div>
                     <div>
-                        <label class="block mb-1">תאריך</label>
-                        <input type="date" id="date" class="w-full p-2 border rounded" required>
+                        <label for="expenseDate" class="block mb-1">תאריך:</label>
+                        <input type="date" id="expenseDate" required class="w-full p-2 border rounded">
                     </div>
-                    <div class="md:col-span-2 lg:col-span-4">
-                        <label class="block mb-1">תיאור</label>
-                        <input type="text" id="description" class="w-full p-2 border rounded">
-                    </div>
-                    <div class="md:col-span-2 lg:col-span-4">
-                        <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
-                            הוסף הוצאה
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- רשימת הוצאות -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">רשימת הוצאות</h3>
-                    <div class="space-x-2 space-x-reverse">
-                        <button onclick="exportToExcel('expenses')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                            ייצא ל-Excel
-                        </button>
-                        <button onclick="exportToPDF('expenses')" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                            ייצא ל-PDF
-                        </button>
+                    <div class="md:col-span-2">
+                        <label for="expenseDescription" class="block mb-1">תיאור:</label>
+                        <textarea id="expenseDescription" class="w-full p-2 border rounded"></textarea>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="p-2 text-right">תאריך</th>
-                                <th class="p-2 text-right">סוג</th>
-                                <th class="p-2 text-right">קטגוריה</th>
-                                <th class="p-2 text-right">סכום</th>
-                                <th class="p-2 text-right">תיאור</th>
-                                <th class="p-2 text-right">פעולות</th>
-                            </tr>
-                        </thead>
-                        <tbody id="expenseList"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="incomes" class="tab-content hidden">
-            <!-- טופס הכנסה -->
-            <div class="bg-white p-6 rounded-lg shadow mb-8">
-                <h3 class="text-xl font-bold mb-4">הוספת הכנסה</h3>
-                <form id="incomeForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block mb-1">סוג הכנסה</label>
-                        <select id="incomeType" class="w-full p-2 border rounded" required>
-                            <option value="משכורת">משכורת</option>
-                            <option value="עסק">עסק</option>
-                            <option value="השקעות">השקעות</option>
-                            <option value="אחר">אחר</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block mb-1">סכום</label>
-                        <input type="number" id="incomeAmount" class="w-full p-2 border rounded" required>
-                    </div>
-                    <div>
-                        <label class="block mb-1">תאריך</label>
-                        <input type="date" id="incomeDate" class="w-full p-2 border rounded" required>
-                    </div>
-                    <div>
-                        <label class="block mb-1">תיאור</label>
-                        <input type="text" id="incomeDescription" class="w-full p-2 border rounded">
-                    </div>
-                    <div class="md:col-span-2 lg:col-span-4">
-                        <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
-                            הוסף הכנסה
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- רשימת הכנסות -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">רשימת הכנסות</h3>
-                    <div class="space-x-2 space-x-reverse">
-                        <button onclick="exportToExcel('incomes')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                            ייצא ל-Excel
-                        </button>
-                        <button onclick="exportToPDF('incomes')" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                            ייצא ל-PDF
-                        </button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="p-2 text-right">תאריך</th>
-                                <th class="p-2 text-right">סוג</th>
-                                <th class="p-2 text-right">סכום</th>
-                                <th class="p-2 text-right">תיאור</th>
-                                <th class="p-2 text-right">פעולות</th>
-                            </tr>
-                        </thead>
-                        <tbody id="incomeList"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="goals" class="tab-content hidden">
-            <!-- טופס מטרת חיסכון -->
-            <div class="bg-white p-6 rounded-lg shadow mb-8">
-                <h3 class="text-xl font-bold mb-4">הוספת מטרת חיסכון</h3>
-                <form id="goalForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block mb-1">שם המטרה</label>
-                        <input type="text" id="goalName" class="w-full p-2 border rounded" required>
-                    </div>
-                    <div>
-                        <label class="block mb-1">סכום יעד</label>
-                        <input type="number" id="goalAmount" class="w-full p-2 border rounded" required>
-                    </div>
-                    <div>
-                        <label class="block mb-1">תאריך יעד</label>
-                        <input type="date" id="goalDate" class="w-full p-2 border rounded" required>
-                    </div>
-                    <div>
-                        <label class="block mb-1">תיאור</label>
-                        <input type="text" id="goalDescription" class="w-full p-2 border rounded">
-                    </div>
-                    <div class="md:col-span-2 lg:col-span-4">
-                        <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
-                            הוסף מטרה
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- רשימת מטרות -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4">מטרות חיסכון</h3>
-                <div id="goalsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-        </div>
-    </div>
-
- <!-- מודל הגדרות -->
-<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="bg-white rounded-lg p-8 max-w-md w-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">הגדרות</h2>
-            <button id="closeSettings" class="text-gray-500 hover:text-gray-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        <form id="settingsForm" class="space-y-4">
-            <div>
-                <label class="block mb-1">ערכת נושא</label>
-                <select id="settingsTheme" class="w-full p-2 border rounded">
-                    <option value="light">בהיר</option>
-                    <option value="dark">כהה</option>
-                </select>
-            </div>
-            <div>
-                <label class="block mb-1">גודל טקסט</label>
-                <select id="settingsFontSize" class="w-full p-2 border rounded">
-                    <option value="small">קטן</option>
-                    <option value="medium">בינוני</option>
-                    <option value="large">גדול</option>
-                </select>
-            </div>
-            <div>
-                <label class="block mb-1">התראות</label>
-                <div class="space-y-2">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="settingsNotifyExpenses" class="ml-2">
-                        התראות על הוצאות חריגות
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" id="settingsNotifyGoals" class="ml-2">
-                        התראות על מטרות חיסכון
-                    </label>
-                </div>
-            </div>
-            <div class="flex justify-end space-x-4 space-x-reverse">
-                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                    שמור
+                <button type="submit" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+                    הוסף הוצאה
                 </button>
+            </form>
+
+            <h3 class="text-xl font-bold mb-4">רשימת הוצאות</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th class="border p-2">תאריך</th>
+                            <th class="border p-2">סוג</th>
+                            <th class="border p-2">קטגוריה</th>
+                            <th class="border p-2">סכום</th>
+                            <th class="border p-2">תיאור</th>
+                            <th class="border p-2">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expensesList"></tbody>
+                </table>
             </div>
-        </form>
+        </div>
+
+        <!-- לשונית הכנסות -->
+        <div id="incomesTab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">הוספת הכנסה</h2>
+            <form id="incomeForm" class="bg-white p-4 rounded shadow mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="incomeSource" class="block mb-1">מקור:</label>
+                        <input type="text" id="incomeSource" required class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label for="incomeAmount" class="block mb-1">סכום:</label>
+                        <input type="number" id="incomeAmount" required class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label for="incomeDate" class="block mb-1">תאריך:</label>
+                        <input type="date" id="incomeDate" required class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label for="incomeDescription" class="block mb-1">תיאור:</label>
+                        <textarea id="incomeDescription" class="w-full p-2 border rounded"></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="mt-4 bg-green-500 text-white px-4 py-2 rounded">
+                    הוסף הכנסה
+                </button>
+            </form>
+
+            <h3 class="text-xl font-bold mb-4">רשימת הכנסות</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th class="border p-2">תאריך</th>
+                            <th class="border p-2">מקור</th>
+                            <th class="border p-2">סכום</th>
+                            <th class="border p-2">תיאור</th>
+                            <th class="border p-2">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incomesList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- לשונית סיכום -->
+        <div id="summaryTab" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white p-4 rounded shadow">
+                    <h3 class="text-xl font-bold mb-2">סה"כ הוצאות</h3>
+                    <p id="totalExpenses" class="text-2xl"></p>
+                </div>
+                <div class="bg-white p-4 rounded shadow">
+                    <h3 class="text-xl font-bold mb-2">סה"כ הכנסות</h3>
+                    <p id="totalIncomes" class="text-2xl"></p>
+                </div>
+                <div class="bg-white p-4 rounded shadow">
+                    <h3 class="text-xl font-bold mb-2">מאזן</h3>
+                    <p id="balance" class="text-2xl"></p>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-    <!-- Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js');
-        }
-    </script>
 
     <!-- Custom JS -->
     <script src="script.js"></script>
 </body>
 </html>
- 

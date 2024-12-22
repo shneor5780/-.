@@ -49,7 +49,29 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// פונקציות אימות
+// פונקציית ניווט בלשוניות
+function setupTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // הסרת הפעיל מכל הלשוניות
+            tabBtns.forEach(b => b.classList.remove('active', 'bg-blue-500', 'text-white'));
+            tabContents.forEach(c => c.classList.add('hidden'));
+            
+            // הוספת פעיל ללשונית הנבחרת
+            btn.classList.add('active', 'bg-blue-500', 'text-white');
+            const tabId = btn.dataset.tab;
+            document.getElementById(tabId).classList.remove('hidden');
+        });
+    });
+
+    // הפעלת הלשונית הראשונה כברירת מחדל
+    if (tabBtns.length > 0) {
+        tabBtns[0].click();
+    }
+}// פונקציות אימות
 function initAuth() {
     const container = document.querySelector('.container');
     const authModal = document.getElementById('authModal');
@@ -72,7 +94,9 @@ function initAuth() {
                 showNotification('שגיאת התחברות: ' + error.message, 'error');
             }
         });
-    }    // כפתור הרשמה
+    }
+
+    // כפתור הרשמה
     const registerBtn = document.getElementById('registerBtn');
     if (registerBtn) {
         registerBtn.addEventListener('click', async () => {
@@ -125,9 +149,7 @@ function initAuth() {
             if (container) container.style.display = 'none';
         }
     });
-}
-
-// פונקציות Firestore
+}// פונקציות Firestore
 async function loadUserData() {
     if (!currentUser) return;
     
@@ -156,7 +178,9 @@ async function saveUserData() {
         budgets: JSON.parse(localStorage.getItem('budgets') || '{"fixedBudget":0,"variableBudget":0}'),
         goals: JSON.parse(localStorage.getItem('goals') || '[]')
     });
-}// פונקציות הגדרות
+}
+
+// פונקציות הגדרות
 async function loadUserSettings() {
     if (!currentUser) return;
     
@@ -198,14 +222,31 @@ function setupSettings() {
     // פתיחת מודל ההגדרות
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
+            // טעינת ההגדרות הנוכחיות לטופס
+            if (settingsForm) {
+                const themeSelect = document.getElementById('settingsTheme');
+                const fontSelect = document.getElementById('settingsFontSize');
+                const notifyExpenses = document.getElementById('settingsNotifyExpenses');
+                const notifyGoals = document.getElementById('settingsNotifyGoals');
+
+                if (themeSelect) themeSelect.value = userSettings.theme;
+                if (fontSelect) fontSelect.value = userSettings.fontSize;
+                if (notifyExpenses) notifyExpenses.checked = userSettings.notifyExpenses;
+                if (notifyGoals) notifyGoals.checked = userSettings.notifyGoals;
+            }
             settingsModal.classList.remove('hidden');
         });
-    }
-    
-    // סגירת מודל ההגדרות
+    }    // סגירת מודל ההגדרות
     if (closeSettings && settingsModal) {
         closeSettings.addEventListener('click', () => {
             settingsModal.classList.add('hidden');
+        });
+
+        // סגירה בלחיצה מחוץ למודל
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.add('hidden');
+            }
         });
     }
     
@@ -217,8 +258,8 @@ function setupSettings() {
             userSettings = {
                 theme: document.getElementById('settingsTheme').value,
                 fontSize: document.getElementById('settingsFontSize').value,
-                notifyExpenses: document.getElementById('settingsNotifyExpenses').checked,
-                notifyGoals: document.getElementById('settingsNotifyGoals').checked
+                notifyExpenses: document.getElementById('settingsNotifyExpenses')?.checked || false,
+                notifyGoals: document.getElementById('settingsNotifyGoals')?.checked || false
             };
             
             await saveUserSettings();
@@ -241,7 +282,8 @@ function updateCategories(type) {
         option.textContent = category;
         categorySelect.appendChild(option);
     });
-}// פונקציות הוצאות והכנסות
+}
+
 function updateDisplay() {
     const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
     const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
@@ -266,9 +308,7 @@ function updateDisplay() {
             `;
             expensesList.appendChild(row);
         });
-    }
-    
-    // עדכון טבלת הכנסות
+    }    // עדכון טבלת הכנסות
     const incomesList = document.getElementById('incomesList');
     if (incomesList) {
         incomesList.innerHTML = '';
@@ -314,7 +354,9 @@ function updateDisplay() {
         summaryElements.balance.textContent = balance.toLocaleString() + ' ₪';
         summaryElements.balance.className = balance >= 0 ? 'text-green-500 font-bold' : 'text-red-500 font-bold';
     }
-}// פונקציות הוספה ומחיקה
+}
+
+// פונקציות הוספה ומחיקה
 function addExpense(e) {
     e.preventDefault();
     
@@ -384,17 +426,16 @@ function deleteIncome(index) {
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     setupSettings();
+    setupTabs();
     
     // טפסים
     const forms = {
         expense: document.getElementById('expenseForm'),
-        income: document.getElementById('incomeForm'),
-        goal: document.getElementById('goalForm')
+        income: document.getElementById('incomeForm')
     };
     
     if (forms.expense) forms.expense.addEventListener('submit', addExpense);
     if (forms.income) forms.income.addEventListener('submit', addIncome);
-    if (forms.goal) forms.goal.addEventListener('submit', addGoal);
     
     // עדכון קטגוריות
     const expenseType = document.getElementById('expenseType');

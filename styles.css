@@ -39,18 +39,6 @@ body {
     color: var(--dark-text);
 }
 
-.dark-theme .bg-white {
-    background-color: #2d2d2d;
-}
-
-.dark-theme .text-gray-600 {
-    color: #d1d1d1;
-}
-
-.dark-theme .border {
-    border-color: var(--dark-border);
-}
-
 /* גדלי טקסט */
 .font-size-small {
     font-size: 0.875rem;
@@ -62,26 +50,6 @@ body {
 
 .font-size-large {
     font-size: 1.125rem;
-}
-
-/* סגנונות לייאאוט */
-.scroll-layout .tab-content {
-    display: block !important;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    border-bottom: 1px solid var(--light-border);
-}
-
-.scroll-layout .tab-buttons {
-    display: none;
-}
-
-.tabs-layout .tab-content {
-    display: none;
-}
-
-.tabs-layout .tab-content.active {
-    display: block;
 }
 
 /* מודלים */

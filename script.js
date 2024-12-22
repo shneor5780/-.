@@ -35,13 +35,14 @@ let userSettings = {
 
 // פונקציות אימות
 function initAuth() {
+    // הסתרת התוכן הראשי עד להתחברות
     const container = document.querySelector('.container');
     const authModal = document.getElementById('authModal');
     
     if (container) container.style.display = 'none';
     if (authModal) authModal.style.display = 'flex';
     
-    // אירועי טופס התחברות
+    // טופס התחברות
     const authForm = document.getElementById('authForm');
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
@@ -51,6 +52,7 @@ function initAuth() {
             
             try {
                 await firebase.auth().signInWithEmailAndPassword(email, password);
+                showNotification('התחברת בהצלחה!', 'success');
             } catch (error) {
                 showNotification('שגיאת התחברות: ' + error.message, 'error');
             }
@@ -91,6 +93,7 @@ function initAuth() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             firebase.auth().signOut();
+            showNotification('התנתקת בהצלחה', 'success');
         });
     }
 
@@ -125,6 +128,7 @@ async function loadUserData() {
     }
     
     updateDisplay();
+    updateGoalsList();
 }
 
 async function saveUserData() {
@@ -132,13 +136,14 @@ async function saveUserData() {
     
     const db = firebase.firestore();
     await db.collection('users').doc(currentUser.uid).set({
-        expenses: getExpenses(),
-        incomes: getIncomes(),
-        budgets: getBudgets(),
-        goals: getGoals()
+        expenses: JSON.parse(localStorage.getItem('expenses') || '[]'),
+        incomes: JSON.parse(localStorage.getItem('incomes') || '[]'),
+        budgets: JSON.parse(localStorage.getItem('budgets') || '{"fixedBudget":0,"variableBudget":0}'),
+        goals: JSON.parse(localStorage.getItem('goals') || '[]')
     });
 }
 
+// פונקציות הגדרות
 async function loadUserSettings() {
     if (!currentUser) return;
     
@@ -158,7 +163,6 @@ async function saveUserSettings() {
     await db.collection('userSettings').doc(currentUser.uid).set(userSettings);
 }
 
-// פונקציות הגדרות
 function applySettings() {
     // ערכת נושא
     if (userSettings.theme === 'dark') {
@@ -170,16 +174,29 @@ function applySettings() {
     // גודל טקסט
     document.body.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
     document.body.classList.add(`font-size-${userSettings.fontSize}`);
-    
-    // עדכון טופס הגדרות
-    document.getElementById('settingsTheme').value = userSettings.theme;
-    document.getElementById('settingsFontSize').value = userSettings.fontSize;
-    document.getElementById('settingsNotifyExpenses').checked = userSettings.notifyExpenses;
-    document.getElementById('settingsNotifyGoals').checked = userSettings.notifyGoals;
 }
 
 function setupSettings() {
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettings = document.getElementById('closeSettings');
     const settingsForm = document.getElementById('settingsForm');
+
+    // פתיחת מודל ההגדרות
+    if (settingsBtn && settingsModal) {
+        settingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('hidden');
+        });
+    }
+    
+    // סגירת מודל ההגדרות
+    if (closeSettings && settingsModal) {
+        closeSettings.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+    }
+    
+    // שמירת הגדרות
     if (settingsForm) {
         settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -193,63 +210,54 @@ function setupSettings() {
             
             await saveUserSettings();
             applySettings();
-            document.getElementById('settingsModal').classList.add('hidden');
+            settingsModal.classList.add('hidden');
             showNotification('ההגדרות נשמרו בהצלחה', 'success');
         });
     }
-}
-
-// פונקציות עזר
-function getExpenses() {
-    return JSON.parse(localStorage.getItem('expenses') || '[]');
-}
-
-function getIncomes() {
-    return JSON.parse(localStorage.getItem('incomes') || '[]');
-}
-
-function getBudgets() {
-    return JSON.parse(localStorage.getItem('budgets') || '{"fixedBudget":0,"variableBudget":0}');
-}
-
-function getGoals() {
-    return JSON.parse(localStorage.getItem('goals') || '[]');
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
-        type === 'error' ? 'bg-red-500' : 
-        type === 'success' ? 'bg-green-500' : 
-        'bg-blue-500'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
+}// פונקציות הוצאות והכנסות
+function addExpense(e) {
+    e.preventDefault();
     
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}// פונקציות לשוניות
-function setupTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+    const expense = {
+        type: document.getElementById('expenseType').value,
+        category: document.getElementById('expenseCategory').value,
+        amount: Number(document.getElementById('expenseAmount').value),
+        date: document.getElementById('expenseDate').value,
+        description: document.getElementById('expenseDescription').value
+    };
+
+    const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+    expenses.push(expense);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
     
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // הסרת הפעיל מכל הלשוניות
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            
-            // הוספת פעיל ללשונית הנבחרת
-            btn.classList.add('active');
-            const tabId = btn.dataset.tab;
-            document.getElementById(tabId).classList.add('active');
-        });
-    });
+    saveUserData();
+    updateDisplay();
+    e.target.reset();
+    showNotification('ההוצאה נוספה בהצלחה', 'success');
+}
+
+function addIncome(e) {
+    e.preventDefault();
+    
+    const income = {
+        source: document.getElementById('incomeSource').value,
+        amount: Number(document.getElementById('incomeAmount').value),
+        date: document.getElementById('incomeDate').value,
+        description: document.getElementById('incomeDescription').value
+    };
+
+    const incomes = JSON.parse(localStorage.getItem('incomes') || '[]');
+    incomes.push(income);
+    localStorage.setItem('incomes', JSON.stringify(incomes));
+    
+    saveUserData();
+    updateDisplay();
+    e.target.reset();
+    showNotification('ההכנסה נוספה בהצלחה', 'success');
 }
 
 // פונקציות מטרות
-async function addGoal(e) {
+function addGoal(e) {
     e.preventDefault();
     
     const goal = {
@@ -259,41 +267,22 @@ async function addGoal(e) {
         description: document.getElementById('goalDescription').value,
         currentAmount: 0
     };
-    
-    const goals = getGoals();
+
+    const goals = JSON.parse(localStorage.getItem('goals') || '[]');
     goals.push(goal);
     localStorage.setItem('goals', JSON.stringify(goals));
-    await saveUserData();
     
+    saveUserData();
+    updateGoalsList();
     e.target.reset();
-    updateGoalsList();
     showNotification('המטרה נוספה בהצלחה', 'success');
-}
-
-async function updateGoalAmount(index, amount) {
-    const goals = getGoals();
-    goals[index].currentAmount += Number(amount);
-    localStorage.setItem('goals', JSON.stringify(goals));
-    await saveUserData();
-    updateGoalsList();
-}
-
-async function deleteGoal(index) {
-    if (!confirm('האם אתה בטוח שברצונך למחוק מטרה זו?')) return;
-    
-    const goals = getGoals();
-    goals.splice(index, 1);
-    localStorage.setItem('goals', JSON.stringify(goals));
-    await saveUserData();
-    updateGoalsList();
-    showNotification('המטרה נמחקה בהצלחה', 'success');
 }
 
 function updateGoalsList() {
     const goalsList = document.getElementById('goalsList');
     if (!goalsList) return;
     
-    const goals = getGoals();
+    const goals = JSON.parse(localStorage.getItem('goals') || '[]');
     goalsList.innerHTML = '';
     
     goals.forEach((goal, index) => {
@@ -313,12 +302,10 @@ function updateGoalsList() {
             <p class="text-sm">נותרו ${daysLeft} ימים</p>
             <p class="text-sm">נדרש לחסוך: ${monthlyNeeded.toLocaleString()} ₪ בחודש</p>
             <div class="mt-4 space-x-2 space-x-reverse">
-                <button onclick="updateGoalAmount(${index}, prompt('הכנס סכום להוספה:'))" 
-                        class="bg-green-500 text-white px-2 py-1 rounded text-sm">
+                <button onclick="updateGoalAmount(${index})" class="bg-green-500 text-white px-2 py-1 rounded text-sm">
                     הוסף סכום
                 </button>
-                <button onclick="deleteGoal(${index})" 
-                        class="bg-red-500 text-white px-2 py-1 rounded text-sm">
+                <button onclick="deleteGoal(${index})" class="bg-red-500 text-white px-2 py-1 rounded text-sm">
                     מחק
                 </button>
             </div>
@@ -327,12 +314,52 @@ function updateGoalsList() {
     });
 }
 
+function updateGoalAmount(index) {
+    const amount = prompt('הכנס סכום להוספה:');
+    if (!amount) return;
+    
+    const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+    goals[index].currentAmount += Number(amount);
+    localStorage.setItem('goals', JSON.stringify(goals));
+    
+    saveUserData();
+    updateGoalsList();
+    showNotification('הסכום עודכן בהצלחה', 'success');
+}
+
+function deleteGoal(index) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק מטרה זו?')) return;
+    
+    const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+    goals.splice(index, 1);
+    localStorage.setItem('goals', JSON.stringify(goals));
+    
+    saveUserData();
+    updateGoalsList();
+    showNotification('המטרה נמחקה בהצלחה', 'success');
+}
+
+// פונקציות עזר
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
+        type === 'error' ? 'bg-red-500' : 
+        type === 'success' ? 'bg-green-500' : 
+        'bg-blue-500'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
 // אתחול האפליקציה
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
-    setupTabs();
+    setupSettings();
     
-    // טפסים
     const forms = {
         expense: document.getElementById('expenseForm'),
         income: document.getElementById('incomeForm'),
@@ -342,25 +369,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (forms.expense) forms.expense.addEventListener('submit', addExpense);
     if (forms.income) forms.income.addEventListener('submit', addIncome);
     if (forms.goal) forms.goal.addEventListener('submit', addGoal);
-    
-    // עדכון קטגוריות
-    const expenseType = document.getElementById('expenseType');
-    if (expenseType) {
-        updateCategories('הוצאות קבועות');
-        expenseType.addEventListener('change', (e) => updateCategories(e.target.value));
-    }
-    
-    // סיכום
-    const summaryType = document.getElementById('summaryType');
-    if (summaryType) summaryType.addEventListener('change', updateDisplay);
-    
-    // הגדרות
-    setupSettings();
-    
-    // Service Worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(() => console.log('Service Worker registered'))
-            .catch(error => console.log('Service Worker registration failed:', error));
-    }
 });

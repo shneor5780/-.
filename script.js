@@ -1,27 +1,3 @@
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBWi-H1IrHpy9kgVDTUCqRqkcy3K44QVhc",
-  authDomain: "expense-tracker-d4247.firebaseapp.com",
-  projectId: "expense-tracker-d4247",
-  storageBucket: "expense-tracker-d4247.appspot.com",
-  messagingSenderId: "368393545158",
-  appId: "1:368393545158:web:c9292c0107f1d894c1ae3f"
-};
-
-// אתחול Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-
-// משתני המסך
-const loginScreen = document.getElementById('loginScreen');
-const registerScreen = document.getElementById('registerScreen');
-const mainApp = document.getElementById('mainApp');
-const settingsModal = document.getElementById('settingsModal');
-
-// משתני משתמש גלובליים
-let currentUser = null;
-let userSettings = null;
-
 // קטגוריות
 const CATEGORIES = {
     'הוצאות קבועות': [
@@ -47,144 +23,99 @@ const CATEGORIES = {
     ]
 };
 
+// משתני מערכת
+const settingsModal = document.getElementById('settingsModal');
+let userSettings = loadSettings();
+
 // אתחול המערכת
 document.addEventListener('DOMContentLoaded', () => {
-    // מאזיני אירועים למשתמשים
-    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
-    document.getElementById('registerForm')?.addEventListener('submit', handleRegister);
-    document.getElementById('settingsForm')?.addEventListener('submit', handleSettingsSave);
-    document.getElementById('showRegister')?.addEventListener('click', () => toggleScreens('register'));
-    document.getElementById('showLogin')?.addEventListener('click', () => toggleScreens('login'));
-    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
-    document.getElementById('settingsBtn')?.addEventListener('click', () => settingsModal.classList.remove('hidden'));
-    document.getElementById('closeSettings')?.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    // מאזיני אירועים להגדרות
+    document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    document.getElementById('closeSettings').addEventListener('click', () => settingsModal.classList.add('hidden'));
+    document.getElementById('settingsForm').addEventListener('submit', handleSettingsSave);
 
     // מאזיני אירועים להוצאות
-    document.getElementById('expenseForm')?.addEventListener('submit', addExpense);
-    document.getElementById('expenseType')?.addEventListener('change', updateCategories);
-    
-    // בדיקת מצב משתמש
-    auth.onAuthStateChanged(handleAuthStateChanged);
+    document.getElementById('expenseForm').addEventListener('submit', addExpense);
+    document.getElementById('expenseType').addEventListener('change', updateCategories);
+    document.getElementById('summaryType').addEventListener('change', updateDisplay);
+    document.getElementById('fixedBudget').addEventListener('change', saveBudgets);
+    document.getElementById('variableBudget').addEventListener('change', saveBudgets);
+
+    // אתחול התצוגה
+    setDefaultDate();
+    updateCategories();
+    applySettings();
+    loadData();
 });
 
-// פונקציות אימות משתמש
-async function handleLogin(e) {
-    e.preventDefault();
-    try {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        await auth.signInWithEmailAndPassword(email, password);
-    } catch (error) {
-        alert('שגיאת התחברות: ' + error.message);
-    }
+// פונקציות הגדרות
+function loadSettings() {
+    const defaultSettings = {
+        name: 'משתמש',
+        theme: 'light',
+        defaultView: 'monthly'
+    };
+    const savedSettings = localStorage.getItem('userSettings');
+    return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
 }
 
-async function handleRegister(e) {
-    e.preventDefault();
-    try {
-        const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
-        const name = document.getElementById('registerName').value;
-        
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        await userCredential.user.updateProfile({ displayName: name });
-        await saveUserSettings({ name, theme: 'light' });
-    } catch (error) {
-        alert('שגיאת הרשמה: ' + error.message);
-    }
+function saveSettings(settings) {
+    localStorage.setItem('userSettings', JSON.stringify(settings));
 }
 
-async function handleLogout() {
-    try {
-        await auth.signOut();
-    } catch (error) {
-        alert('שגיאת התנתקות: ' + error.message);
-    }
-}
-
-function handleAuthStateChanged(user) {
-    currentUser = user;
-    if (user) {
-        document.getElementById('userDisplayName').textContent = user.displayName || 'משתמש';
-        loadUserSettings();
-        toggleScreens('main');
-        loadData();
-    } else {
-        toggleScreens('login');
-    }
-}
-
-// ניווט בין מסכים
-function toggleScreens(screen) {
-    loginScreen.classList.add('hidden');
-    registerScreen.classList.add('hidden');
-    mainApp.classList.add('hidden');
-    settingsModal.classList.add('hidden');
-
-    switch(screen) {
-        case 'login':
-            loginScreen.classList.remove('hidden');
-            break;
-        case 'register':
-            registerScreen.classList.remove('hidden');
-            break;
-        case 'main':
-            mainApp.classList.remove('hidden');
-            updateCategories();
-            setDefaultDate();
-            break;
-    }
-}
-
-// הגדרות משתמש
-async function saveUserSettings(settings) {
-    if (!currentUser) return;
-    userSettings = settings;
-    localStorage.setItem(`settings_${currentUser.uid}`, JSON.stringify(settings));
-    applyUserSettings();
-}
-
-function loadUserSettings() {
-    if (!currentUser) return;
-    const settings = localStorage.getItem(`settings_${currentUser.uid}`);
-    if (settings) {
-        userSettings = JSON.parse(settings);
-        applyUserSettings();
-    }
-}
-
-function applyUserSettings() {
-    if (!userSettings) return;
+function applySettings() {
+    document.getElementById('userName').textContent = userSettings.name;
+    document.getElementById('settingsName').value = userSettings.name;
+    document.getElementById('settingsTheme').value = userSettings.theme;
+    document.getElementById('defaultView').value = userSettings.defaultView;
+    document.getElementById('summaryType').value = userSettings.defaultView;
     
-    document.getElementById('settingsName').value = userSettings.name || '';
-    document.getElementById('settingsTheme').value = userSettings.theme || 'light';
     document.body.classList.toggle('dark-theme', userSettings.theme === 'dark');
 }
 
-async function handleSettingsSave(e) {
+function handleSettingsSave(e) {
     e.preventDefault();
-    const name = document.getElementById('settingsName').value;
-    const theme = document.getElementById('settingsTheme').value;
-    
-    try {
-        await saveUserSettings({ name, theme });
-        if (currentUser) {
-            await currentUser.updateProfile({ displayName: name });
-            document.getElementById('userDisplayName').textContent = name;
-        }
-        settingsModal.classList.add('hidden');
-    } catch (error) {
-        alert('שגיאה בשמירת הגדרות: ' + error.message);
-    }
+    userSettings = {
+        name: document.getElementById('settingsName').value,
+        theme: document.getElementById('settingsTheme').value,
+        defaultView: document.getElementById('defaultView').value
+    };
+    saveSettings(userSettings);
+    applySettings();
+    settingsModal.classList.add('hidden');
+    updateDisplay();
 }
 
 // פונקציות ניהול נתונים
 function loadData() {
-    if (!currentUser) return;
+    const expenses = getExpenses();
+    const { fixedBudget, variableBudget } = getBudgets();
     
-    const userId = currentUser.uid;
-    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
-    updateDisplay(expenses);
+    document.getElementById('fixedBudget').value = fixedBudget;
+    document.getElementById('variableBudget').value = variableBudget;
+    
+    updateDisplay();
+}
+
+function getExpenses() {
+    return JSON.parse(localStorage.getItem('expenses') || '[]');
+}
+
+function getBudgets() {
+    return {
+        fixedBudget: Number(localStorage.getItem('fixedBudget')) || 0,
+        variableBudget: Number(localStorage.getItem('variableBudget')) || 0
+    };
+}
+
+function saveBudgets() {
+    const fixedBudget = document.getElementById('fixedBudget').value;
+    const variableBudget = document.getElementById('variableBudget').value;
+    
+    localStorage.setItem('fixedBudget', fixedBudget);
+    localStorage.setItem('variableBudget', variableBudget);
+    
+    updateDisplay();
 }
 
 function setDefaultDate() {
@@ -197,73 +128,60 @@ function updateCategories() {
     const categorySelect = document.getElementById('category');
     categorySelect.innerHTML = '';
     
-    if (CATEGORIES[type]) {
-        CATEGORIES[type].forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = cat;
-            categorySelect.appendChild(option);
-        });
-    }
+    CATEGORIES[type].forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        categorySelect.appendChild(option);
+    });
 }
 
 function addExpense(e) {
     e.preventDefault();
-    if (!currentUser) return;
+    const expenses = getExpenses();
+    
+    const newExpense = {
+        id: Date.now(),
+        type: document.getElementById('expenseType').value,
+        category: document.getElementById('category').value,
+        amount: Number(document.getElementById('amount').value),
+        date: document.getElementById('date').value,
+        description: document.getElementById('description').value
+    };
 
-    const type = document.getElementById('expenseType').value;
-    const category = document.getElementById('category').value;
-    const amount = Number(document.getElementById('amount').value);
-    const date = document.getElementById('date').value;
-    const description = document.getElementById('description').value;
-
-    if (!amount || amount <= 0) {
+    if (!newExpense.amount || newExpense.amount <= 0) {
         alert('נא להזין סכום תקין');
         return;
     }
 
-    const userId = currentUser.uid;
-    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
-    
-    const newExpense = {
-        id: Date.now(),
-        type,
-        category,
-        amount,
-        date,
-        description
-    };
-
     expenses.push(newExpense);
-    localStorage.setItem(`expenses_${userId}`, JSON.stringify(expenses));
+    localStorage.setItem('expenses', JSON.stringify(expenses));
     
-    document.getElementById('expenseForm').reset();
+    e.target.reset();
     setDefaultDate();
     updateCategories();
-    updateDisplay(expenses);
+    updateDisplay();
 }
 
 function deleteExpense(id) {
-    if (!currentUser || !confirm('האם למחוק הוצאה זו?')) return;
+    if (!confirm('האם למחוק הוצאה זו?')) return;
 
-    const userId = currentUser.uid;
-    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
-    const updatedExpenses = expenses.filter(exp => exp.id !== id);
+    const expenses = getExpenses().filter(exp => exp.id !== id);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    updateDisplay();
+}// פונקציות תצוגה
+function updateDisplay() {
+    const expenses = getExpenses();
+    const summaryType = document.getElementById('summaryType').value;
     
-    localStorage.setItem(`expenses_${userId}`, JSON.stringify(updatedExpenses));
-    updateDisplay(updatedExpenses);
-}
-
-function updateDisplay(expenses) {
     updateExpenseList(expenses);
-    updateStats(expenses);
+    updateSummaryStats(expenses, summaryType);
     updateChart(expenses);
 }
 
 function updateExpenseList(expenses) {
     const expenseList = document.getElementById('expenseList');
-    if (!expenseList) return;
-
+    
     expenseList.innerHTML = expenses
         .sort((a, b) => new Date(b.date) - new Date(a.date))
         .map(expense => `
@@ -282,30 +200,58 @@ function updateExpenseList(expenses) {
         `).join('');
 }
 
-function updateStats(expenses) {
-    const monthlyStats = document.getElementById('monthlyStats');
-    if (!monthlyStats) return;
+function updateSummaryStats(expenses, summaryType) {
+    const summaryStats = document.getElementById('summaryStats');
+    const today = new Date();
+    let filteredExpenses;
+    let periodText;
 
-    const totalFixed = expenses
+    switch(summaryType) {
+        case 'daily':
+            const todayStr = today.toISOString().split('T')[0];
+            filteredExpenses = expenses.filter(exp => exp.date === todayStr);
+            periodText = 'היום';
+            break;
+        case 'weekly':
+            const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+            filteredExpenses = expenses.filter(exp => new Date(exp.date) >= weekStart);
+            periodText = 'השבוע';
+            break;
+        case 'monthly':
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            filteredExpenses = expenses.filter(exp => new Date(exp.date) >= monthStart);
+            periodText = 'החודש';
+            break;
+        default:
+            filteredExpenses = expenses;
+            periodText = 'סה"כ';
+    }
+
+    const totalFixed = filteredExpenses
         .filter(exp => exp.type === 'הוצאות קבועות')
         .reduce((sum, exp) => sum + exp.amount, 0);
     
-    const totalVariable = expenses
+    const totalVariable = filteredExpenses
         .filter(exp => exp.type === 'הוצאות משתנות')
         .reduce((sum, exp) => sum + exp.amount, 0);
 
-    monthlyStats.innerHTML = `
+    const { fixedBudget, variableBudget } = getBudgets();
+
+    summaryStats.innerHTML = `
         <div class="space-y-4">
             <div>
-                <h3 class="font-bold mb-2">הוצאות קבועות</h3>
-                <p>סה"כ: ${totalFixed.toLocaleString()} ₪</p>
+                <h3 class="font-bold mb-2">הוצאות קבועות ${periodText}</h3>
+                <p>סה"כ: ${totalFixed.toLocaleString()} ₪ ${fixedBudget ? `(${((totalFixed/fixedBudget)*100).toFixed(1)}% מהתקציב)` : ''}</p>
             </div>
             <div>
-                <h3 class="font-bold mb-2">הוצאות משתנות</h3>
-                <p>סה"כ: ${totalVariable.toLocaleString()} ₪</p>
+                <h3 class="font-bold mb-2">הוצאות משתנות ${periodText}</h3>
+                <p>סה"כ: ${totalVariable.toLocaleString()} ₪ ${variableBudget ? `(${((totalVariable/variableBudget)*100).toFixed(1)}% מהתקציב)` : ''}</p>
             </div>
             <div class="pt-4 border-t">
-                <h3 class="font-bold">סה"כ כללי: ${(totalFixed + totalVariable).toLocaleString()} ₪</h3>
+                <h3 class="font-bold">סה"כ ${periodText}: ${(totalFixed + totalVariable).toLocaleString()} ₪</h3>
+                ${(fixedBudget || variableBudget) ? 
+                    `<p>נותר בתקציב: ${((fixedBudget + variableBudget) - (totalFixed + totalVariable)).toLocaleString()} ₪</p>` 
+                    : ''}
             </div>
         </div>
     `;
@@ -313,7 +259,7 @@ function updateStats(expenses) {
 
 function updateChart(expenses) {
     const ctx = document.getElementById('expenseChart');
-    if (!ctx || expenses.length === 0) return;
+    if (!expenses.length) return;
     
     if (window.myChart) {
         window.myChart.destroy();
@@ -358,28 +304,45 @@ function updateChart(expenses) {
 
 // פונקציות ייצוא
 function exportToExcel() {
-    if (!currentUser) return;
-    
-    const userId = currentUser.uid;
-    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
+    const expenses = getExpenses();
     if (expenses.length === 0) {
         alert('אין נתונים לייצוא');
         return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(expenses);
+    // הכנת הנתונים בפורמט מסודר
+    const exportData = expenses.map(exp => ({
+        'תאריך': new Date(exp.date).toLocaleDateString('he-IL'),
+        'סוג הוצאה': exp.type,
+        'קטגוריה': exp.category,
+        'סכום': exp.amount,
+        'תיאור': exp.description
+    }));
+
+    // יצירת גיליון עבודה
+    const worksheet = XLSX.utils.json_to_sheet(exportData, {
+        header: ['תאריך', 'סוג הוצאה', 'קטגוריה', 'סכום', 'תיאור']
+    });
+
+    // סידור רוחב העמודות
+    const colWidths = [
+        { wch: 12 }, // תאריך
+        { wch: 15 }, // סוג הוצאה
+        { wch: 15 }, // קטגוריה
+        { wch: 10 }, // סכום
+        { wch: 30 }  // תיאור
+    ];
+    worksheet['!cols'] = colWidths;
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "הוצאות");
     
     const fileName = `הוצאות-${new Date().toLocaleDateString('he-IL')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
 }
 
 function exportToPDF() {
-    if (!currentUser) return;
-    
-    const userId = currentUser.uid;
-    const expenses = JSON.parse(localStorage.getItem(`expenses_${userId}`) || '[]');
+    const expenses = getExpenses();
     if (expenses.length === 0) {
         alert('אין נתונים לייצוא');
         return;
@@ -388,10 +351,17 @@ function exportToPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
+    // הגדרת כותרת
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
     doc.text("דוח הוצאות", 105, 15, null, null, "center");
     
-    const headers = [["תאריך", "סוג", "קטגוריה", "סכום", "תיאור"]];
+    // הוספת תאריך הפקה
+    doc.setFontSize(12);
+    doc.text(`תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}`, 105, 25, null, null, "center");
+
+    // הכנת נתונים לטבלה
+    const headers = [["תאריך", "סוג הוצאה", "קטגוריה", "סכום", "תיאור"]];
     const data = expenses
         .sort((a, b) => new Date(b.date) - new Date(a.date))
         .map(exp => [
@@ -402,23 +372,47 @@ function exportToPDF() {
             exp.description
         ]);
 
+    // הוספת סיכומים
+    const totalFixed = expenses
+        .filter(exp => exp.type === 'הוצאות קבועות')
+        .reduce((sum, exp) => sum + exp.amount, 0);
+    
+    const totalVariable = expenses
+        .filter(exp => exp.type === 'הוצאות משתנות')
+        .reduce((sum, exp) => sum + exp.amount, 0);
+
+    // יצירת טבלה
     doc.autoTable({
         head: headers,
         body: data,
-        startY: 25,
+        startY: 35,
         theme: 'grid',
         styles: {
             font: "helvetica",
-            fontSize: 8,
+            fontSize: 9,
             cellPadding: 3,
-            halign: 'right'
+            halign: 'right',
+            direction: 'rtl', 
+            textColor: [0, 0, 0]
         },
         headStyles: {
             fillColor: [41, 128, 185],
             textColor: 255,
-            fontSize: 9
+            fontSize: 10,
+            fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+            fillColor: [245, 245, 245]
         }
     });
+
+    // הוספת סיכום בסוף
+    const finalY = doc.lastAutoTable.finalY || 150;
+    doc.setFontSize(12);
+    doc.text(`סה"כ הוצאות קבועות: ${totalFixed.toLocaleString()} ₪`, 190, finalY + 15, null, null, "right");
+    doc.text(`סה"כ הוצאות משתנות: ${totalVariable.toLocaleString()} ₪`, 190, finalY + 25, null, null, "right");
+    doc.setFont("helvetica", "bold");
+    doc.text(`סה"כ כללי: ${(totalFixed + totalVariable).toLocaleString()} ₪`, 190, finalY + 35, null, null, "right");
 
     const fileName = `הוצאות-${new Date().toLocaleDateString('he-IL')}.pdf`;
     doc.save(fileName);

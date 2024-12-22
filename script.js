@@ -23,252 +23,280 @@ const CATEGORIES = {
     ]
 };
 
-// תרגומים
-const translations = {
-    he: {
-        fixedExpenses: 'הוצאות קבועות',
-        variableExpenses: 'הוצאות משתנות',
-        amount: 'סכום',
-        date: 'תאריך',
-        description: 'תיאור',
-        category: 'קטגוריה',
-        settings: 'הגדרות',
-        save: 'שמור',
-        cancel: 'ביטול'
-    },
-    en: {
-        fixedExpenses: 'Fixed Expenses',
-        variableExpenses: 'Variable Expenses',
-        amount: 'Amount',
-        date: 'Date',
-        description: 'Description',
-        category: 'Category',
-        settings: 'Settings',
-        save: 'Save',
-        cancel: 'Cancel'
-    }
-};
-
 // משתני מערכת
-const settingsModal = document.getElementById('settingsModal');
-let userSettings = loadSettings();
-let currentUser = null;
-
-// Google Auth
-function onSignIn(googleUser) {
-    const profile = googleUser.getBasicProfile();
-    currentUser = {
-        id: profile.getId(),
-        name: profile.getName(),
-        email: profile.getEmail(),
-        image: profile.getImageUrl()
-    };
-    updateUIForAuth();
-    loadUserData();
-}
-
-function signOut() {
-    const auth2 = gapi.auth2.getInstance();
-    auth2.signOut().then(() => {
-        currentUser = null;
-        updateUIForAuth();
-    });
-}
+let userSettings = {
+    language: 'he',
+    fontSize: 'medium',
+    theme: 'light'
+};
 
 // אתחול המערכת
 document.addEventListener('DOMContentLoaded', () => {
+    initializeApp();
+});
+
+function initializeApp() {
     // מאזיני אירועים להגדרות
-    document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
-    document.getElementById('closeSettings').addEventListener('click', () => settingsModal.classList.add('hidden'));
-    document.getElementById('settingsForm').addEventListener('submit', handleSettingsSave);
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('closeSettings').addEventListener('click', closeSettings);
+    document.getElementById('settingsForm').addEventListener('submit', saveSettings);
 
     // מאזיני אירועים להוצאות
     document.getElementById('expenseForm').addEventListener('submit', addExpense);
     document.getElementById('expenseType').addEventListener('change', updateCategories);
-    document.getElementById('summaryType').addEventListener('change', updateDisplay);
-    document.getElementById('fixedBudget').addEventListener('change', saveBudgets);
-    document.getElementById('variableBudget').addEventListener('change', saveBudgets);
 
-    // מאזיני אירועים לשפה וגודל טקסט
-    document.getElementById('languageSelect').addEventListener('change', (e) => changeLanguage(e.target.value));
-    document.getElementById('fontSizeSelect').addEventListener('change', (e) => changeFontSize(e.target.value));
-
-    // אתחול התצוגה
+    // אתחול ראשוני
     setDefaultDate();
     updateCategories();
-    applySettings();
-    loadData();
-});// פונקציות הגדרות
-function loadSettings() {
-    const defaultSettings = {
-        name: 'משתמש',
-        theme: 'light',
-        defaultView: 'monthly',
-        fontSize: 'medium',
-        language: 'he',
-        notifications: {
-            budgetAlert: true,
-            weeklyReport: false
-        }
-    };
-    const savedSettings = localStorage.getItem('userSettings');
-    return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+    loadSettings();
+    loadExpenses();
 }
 
-function saveSettings(settings) {
-    localStorage.setItem('userSettings', JSON.stringify(settings));
-    if (currentUser) {
-        // שמירת הגדרות בענן אם המשתמש מחובר
-        saveToCloud('settings', settings);
+// פונקציות הגדרות
+function openSettings() {
+    document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+function closeSettings() {
+    document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function saveSettings(e) {
+    e.preventDefault();
+    
+    userSettings = {
+        language: document.getElementById('languageSelect').value,
+        fontSize: document.getElementById('fontSizeSelect').value,
+        theme: document.getElementById('themeSelect').value
+    };
+
+    localStorage.setItem('userSettings', JSON.stringify(userSettings));
+    applySettings();
+    closeSettings();
+}
+
+function loadSettings() {
+    const savedSettings = localStorage.getItem('userSettings');
+    if (savedSettings) {
+        userSettings = JSON.parse(savedSettings);
+        document.getElementById('languageSelect').value = userSettings.language;
+        document.getElementById('fontSizeSelect').value = userSettings.fontSize;
+        document.getElementById('themeSelect').value = userSettings.theme;
+        applySettings();
     }
 }
 
 function applySettings() {
-    document.getElementById('userName').textContent = userSettings.name;
-    document.getElementById('settingsName').value = userSettings.name;
-    document.getElementById('settingsTheme').value = userSettings.theme;
-    document.getElementById('defaultView').value = userSettings.defaultView;
-    document.getElementById('summaryType').value = userSettings.defaultView;
-    document.getElementById('languageSelect').value = userSettings.language;
-    document.getElementById('fontSizeSelect').value = userSettings.fontSize;
-    
-    // החלת ערכת נושא
-    document.body.className = `theme-${userSettings.theme} font-size-${userSettings.fontSize}`;
-    
     // החלת שפה
-    changeLanguage(userSettings.language);
-    
-    // הגדרת התראות
-    if (userSettings.notifications) {
-        document.getElementById('notifyBudget').checked = userSettings.notifications.budgetAlert;
-        document.getElementById('notifyWeekly').checked = userSettings.notifications.weeklyReport;
-    }
-}
+    document.documentElement.lang = userSettings.language;
+    document.dir = userSettings.language === 'he' ? 'rtl' : 'ltr';
 
-function handleSettingsSave(e) {
+    // החלת גודל טקסט
+    document.body.classList.remove('text-sm', 'text-base', 'text-lg');
+    switch(userSettings.fontSize) {
+        case 'small':
+            document.body.classList.add('text-sm');
+            break;
+        case 'medium':
+            document.body.classList.add('text-base');
+            break;
+        case 'large':
+            document.body.classList.add('text-lg');
+            break;
+    }
+
+    // החלת ערכת נושא
+    document.body.classList.toggle('dark', userSettings.theme === 'dark');
+}// פונקציות ניהול הוצאות
+function addExpense(e) {
     e.preventDefault();
-    userSettings = {
-        name: document.getElementById('settingsName').value,
-        theme: document.getElementById('settingsTheme').value,
-        defaultView: document.getElementById('defaultView').value,
-        fontSize: document.getElementById('fontSizeSelect').value,
-        language: document.getElementById('languageSelect').value,
-        notifications: {
-            budgetAlert: document.getElementById('notifyBudget').checked,
-            weeklyReport: document.getElementById('notifyWeekly').checked
-        }
+    
+    const expense = {
+        id: Date.now().toString(),
+        type: document.getElementById('expenseType').value,
+        category: document.getElementById('category').value,
+        amount: parseFloat(document.getElementById('amount').value),
+        date: document.getElementById('date').value,
+        description: document.getElementById('description').value
     };
-    saveSettings(userSettings);
-    applySettings();
-    settingsModal.classList.add('hidden');
+
+    let expenses = getExpenses();
+    expenses.push(expense);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+
+    document.getElementById('expenseForm').reset();
+    setDefaultDate();
     updateDisplay();
 }
 
-// פונקציות שפה וגודל טקסט
-function changeLanguage(lang) {
-    document.documentElement.lang = lang;
-    document.dir = lang === 'he' ? 'rtl' : 'ltr';
+function deleteExpense(id) {
+    let expenses = getExpenses();
+    expenses = expenses.filter(expense => expense.id !== id);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    updateDisplay();
+}
+
+function getExpenses() {
+    const expenses = localStorage.getItem('expenses');
+    return expenses ? JSON.parse(expenses) : [];
+}
+
+function updateCategories() {
+    const type = document.getElementById('expenseType').value;
+    const categorySelect = document.getElementById('category');
     
-    // עדכון טקסטים
-    const elements = document.querySelectorAll('[data-translate]');
-    elements.forEach(element => {
-        const key = element.getAttribute('data-translate');
-        if (translations[lang] && translations[lang][key]) {
-            element.textContent = translations[lang][key];
-        }
+    // ניקוי אפשרויות קיימות
+    categorySelect.innerHTML = '';
+    
+    // הוספת האפשרויות החדשות
+    CATEGORIES[type].forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
     });
 }
 
-function changeFontSize(size) {
-    document.body.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
-    document.body.classList.add(`font-size-${size}`);
-}
-
-// פונקציות שיתוף וגיבוי
-function shareData() {
-    if (navigator.share) {
-        const expenses = getExpenses();
-        const shareData = {
-            title: 'נתוני תקציב',
-            text: `סה"כ הוצאות: ${calculateTotalExpenses(expenses)} ₪`,
-            url: window.location.href
-        };
-        
-        navigator.share(shareData)
-            .catch((error) => console.log('Error sharing:', error));
-    } else {
-        alert('שיתוף אינו נתמך בדפדפן זה');
+// פונקציות ייצוא
+function exportToPDF() {
+    const expenses = getExpenses();
+    if (expenses.length === 0) {
+        alert('אין נתונים לייצוא');
+        return;
     }
-}
 
-function saveToCloud(type, data) {
-    if (!currentUser) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
     
-    // כאן יש להוסיף את הלוגיקה לשמירה בשירות ענן
-    console.log(`Saving ${type} to cloud for user ${currentUser.id}`);
+    // כותרת
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("דוח הוצאות", 105, 15, { align: "center" });
+
+    // יצירת טבלה
+    const tableData = expenses.map(expense => [
+        expense.date,
+        expense.type,
+        expense.category,
+        expense.amount.toString(),
+        expense.description
+    ]);
+
+    doc.autoTable({
+        head: [['תאריך', 'סוג', 'קטגוריה', 'סכום', 'תיאור']],
+        body: tableData,
+        startY: 25,
+        headStyles: { fillColor: [41, 128, 185] },
+        styles: { font: "helvetica", fontSize: 10 }
+    });
+
+    doc.save('expenses.pdf');
 }
 
-// פונקציות ניהול נתונים
-function loadData() {
-    if (currentUser) {
-        // טעינת נתונים מהענן אם המשתמש מחובר
-        loadFromCloud();
+function exportToExcel() {
+    const expenses = getExpenses();
+    if (expenses.length === 0) {
+        alert('אין נתונים לייצוא');
+        return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(expenses);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "הוצאות");
+    XLSX.writeFile(workbook, "expenses.xlsx");
+}
+
+function shareData() {
+    const expenses = getExpenses();
+    if (expenses.length === 0) {
+        alert('אין נתונים לשיתוף');
+        return;
+    }
+
+    const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const shareText = `סך כל ההוצאות: ${totalAmount} ש"ח`;
+
+    if (navigator.share) {
+        navigator.share({
+            title: 'נתוני הוצאות',
+            text: shareText
+        }).catch(err => {
+            console.error('שגיאה בשיתוף:', err);
+        });
     } else {
-        const expenses = getExpenses();
-        const { fixedBudget, variableBudget } = getBudgets();
-        
-        document.getElementById('fixedBudget').value = fixedBudget;
-        document.getElementById('variableBudget').value = variableBudget;
-        
-        updateDisplay();
+        alert('הדפדפן שלך לא תומך בשיתוף');
     }
 }// פונקציות תצוגה
 function updateDisplay() {
     const expenses = getExpenses();
-    const summaryType = document.getElementById('summaryType').value;
-    
-    updateSummaryStats(expenses, summaryType);
-    updateExpenseChart(expenses);
     updateExpenseList(expenses);
-    checkBudgetAlerts(expenses);
+    updateSummaryStats(expenses);
+    updateExpenseChart(expenses);
 }
 
-function updateSummaryStats(expenses, type) {
-    const stats = calculateStats(expenses, type);
-    const summaryStats = document.getElementById('summaryStats');
-    const { fixedBudget, variableBudget } = getBudgets();
+function updateExpenseList(expenses) {
+    const expenseList = document.getElementById('expenseList');
+    expenseList.innerHTML = '';
 
-    let html = `
+    expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(expense => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="p-2">${formatDate(expense.date)}</td>
+            <td class="p-2">${expense.type}</td>
+            <td class="p-2">${expense.category}</td>
+            <td class="p-2">${formatCurrency(expense.amount)}</td>
+            <td class="p-2">${expense.description}</td>
+            <td class="p-2">
+                <button onclick="deleteExpense('${expense.id}')" 
+                        class="text-red-500 hover:text-red-700">
+                    מחק
+                </button>
+            </td>
+        `;
+        expenseList.appendChild(row);
+    });
+}
+
+function updateSummaryStats(expenses) {
+    const summaryStats = document.getElementById('summaryStats');
+    const fixedExpenses = expenses.filter(e => e.type === 'הוצאות קבועות');
+    const variableExpenses = expenses.filter(e => e.type === 'הוצאות משתנות');
+
+    const totalFixed = fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalVariable = variableExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+    summaryStats.innerHTML = `
         <div class="space-y-2">
             <div class="flex justify-between">
                 <span>סה"כ הוצאות קבועות:</span>
-                <span class="${stats.totalFixed > fixedBudget ? 'text-red-500' : 'text-green-500'}">
-                    ${stats.totalFixed.toLocaleString()} ₪
-                </span>
+                <span>${formatCurrency(totalFixed)}</span>
             </div>
             <div class="flex justify-between">
                 <span>סה"כ הוצאות משתנות:</span>
-                <span class="${stats.totalVariable > variableBudget ? 'text-red-500' : 'text-green-500'}">
-                    ${stats.totalVariable.toLocaleString()} ₪
-                </span>
+                <span>${formatCurrency(totalVariable)}</span>
             </div>
             <div class="flex justify-between font-bold">
                 <span>סה"כ:</span>
-                <span>${(stats.totalFixed + stats.totalVariable).toLocaleString()} ₪</span>
+                <span>${formatCurrency(totalFixed + totalVariable)}</span>
             </div>
         </div>
     `;
-
-    summaryStats.innerHTML = html;
 }
 
 function updateExpenseChart(expenses) {
     const ctx = document.getElementById('expenseChart').getContext('2d');
-    const categoryTotals = calculateCategoryTotals(expenses);
-
+    
+    // מחיקת גרף קיים אם יש
     if (window.expenseChart) {
         window.expenseChart.destroy();
     }
+
+    // חישוב סכומים לפי קטגוריה
+    const categoryTotals = {};
+    expenses.forEach(expense => {
+        categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+    });
 
     window.expenseChart = new Chart(ctx, {
         type: 'doughnut',
@@ -283,147 +311,30 @@ function updateExpenseChart(expenses) {
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'right',
-                    labels: {
-                        font: {
-                            size: parseInt(getComputedStyle(document.documentElement).fontSize)
-                        }
-                    }
+                    position: 'right'
                 }
             }
         }
     });
 }
 
-function updateExpenseList(expenses) {
-    const expenseList = document.getElementById('expenseList');
-    expenseList.innerHTML = '';
-
-    expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(expense => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
-        row.innerHTML = `
-            <td class="p-2">${new Date(expense.date).toLocaleDateString('he-IL')}</td>
-            <td class="p-2">${expense.type}</td>
-            <td class="p-2">${expense.category}</td>
-            <td class="p-2">${expense.amount.toLocaleString()} ₪</td>
-            <td class="p-2">${expense.description}</td>
-            <td class="p-2">
-                <button onclick="deleteExpense('${expense.id}')" 
-                        class="text-red-500 hover:text-red-700">
-                    מחק
-                </button>
-            </td>
-        `;
-        expenseList.appendChild(row);
-    });
-}
-
-// פונקציות התראות
-function checkBudgetAlerts(expenses) {
-    if (!userSettings.notifications?.budgetAlert) return;
-
-    const { fixedBudget, variableBudget } = getBudgets();
-    const stats = calculateStats(expenses, 'monthly');
-
-    if (stats.totalFixed > fixedBudget) {
-        showNotification('חריגה מתקציב', 'חרגת מתקציב ההוצאות הקבועות החודשי');
-    }
-
-    if (stats.totalVariable > variableBudget) {
-        showNotification('חריגה מתקציב', 'חרגת מתקציב ההוצאות המשתנות החודשי');
-    }
-}
-
-function showNotification(title, message) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body: message });
-    } else if ('Notification' in window && Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                new Notification(title, { body: message });
-            }
-        });
-    }
-}// פונקציות ייצוא
-function exportToPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const expenses = getExpenses();
-    const stats = calculateStats(expenses, 'monthly');
-
-    // הגדרת כיוון RTL
-    doc.setR2L(true);
-
-    // כותרת
-    doc.setFontSize(20);
-    doc.text('דוח הוצאות', 190, 20, null, null, "right");
-    doc.setFontSize(12);
-    doc.text(new Date().toLocaleDateString('he-IL'), 190, 30, null, null, "right");
-
-    // טבלת הוצאות
-    const tableData = expenses.map(expense => [
-        expense.date,
-        expense.type,
-        expense.category,
-        `${expense.amount.toLocaleString()} ₪`,
-        expense.description
-    ]);
-
-    doc.autoTable({
-        head: [['תאריך', 'סוג', 'קטגוריה', 'סכום', 'תיאור']],
-        body: tableData,
-        startY: 40,
-        theme: 'grid',
-        styles: {
-            font: 'helvetica',
-            direction: 'rtl',
-            textColor: [0, 0, 0]
-        },
-        headStyles: {
-            fillColor: [41, 128, 185],
-            textColor: 255,
-            fontSize: 10,
-            fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-            fillColor: [245, 245, 245]
-        }
-    });
-
-    // סיכום
-    const finalY = doc.lastAutoTable.finalY || 150;
-    doc.setFontSize(12);
-    doc.text(`סה"כ הוצאות קבועות: ${stats.totalFixed.toLocaleString()} ₪`, 190, finalY + 15, null, null, "right");
-    doc.text(`סה"כ הוצאות משתנות: ${stats.totalVariable.toLocaleString()} ₪`, 190, finalY + 25, null, null, "right");
-    doc.setFont("helvetica", "bold");
-    doc.text(`סה"כ כללי: ${(stats.totalFixed + stats.totalVariable).toLocaleString()} ₪`, 190, finalY + 35, null, null, "right");
-
-    const fileName = `הוצאות-${new Date().toLocaleDateString('he-IL')}.pdf`;
-    doc.save(fileName);
-}
-
-function exportToExcel() {
-    const expenses = getExpenses();
-    const ws = XLSX.utils.json_to_sheet(expenses);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "הוצאות");
-    
-    // התאמת רוחב עמודות
-    const cols = [
-        { wch: 12 }, // תאריך
-        { wch: 15 }, // סוג
-        { wch: 15 }, // קטגוריה
-        { wch: 10 }, // סכום
-        { wch: 30 }  // תיאור
-    ];
-    ws['!cols'] = cols;
-
-    const fileName = `הוצאות-${new Date().toLocaleDateString('he-IL')}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-}
-
 // פונקציות עזר
+function setDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('he-IL');
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('he-IL', { 
+        style: 'currency', 
+        currency: 'ILS' 
+    }).format(amount);
+}
+
 function generateColors(count) {
     const colors = [];
     for (let i = 0; i < count; i++) {
@@ -433,57 +344,8 @@ function generateColors(count) {
     return colors;
 }
 
-function calculateStats(expenses, type) {
-    const now = new Date();
-    const filtered = expenses.filter(expense => {
-        const expenseDate = new Date(expense.date);
-        switch (type) {
-            case 'daily':
-                return expenseDate.toDateString() === now.toDateString();
-            case 'weekly':
-                const weekAgo = new Date(now.setDate(now.getDate() - 7));
-                return expenseDate >= weekAgo;
-            case 'monthly':
-                return expenseDate.getMonth() === now.getMonth() &&
-                       expenseDate.getFullYear() === now.getFullYear();
-            default:
-                return true;
-        }
-    });
-
-    return {
-        totalFixed: filtered.filter(e => e.type === 'הוצאות קבועות')
-                           .reduce((sum, e) => sum + e.amount, 0),
-        totalVariable: filtered.filter(e => e.type === 'הוצאות משתנות')
-                              .reduce((sum, e) => sum + e.amount, 0)
-    };
-}
-
-function calculateCategoryTotals(expenses) {
-    return expenses.reduce((totals, expense) => {
-        totals[expense.category] = (totals[expense.category] || 0) + expense.amount;
-        return totals;
-    }, {});
-}
-
-// פונקציות אתחול
-function setDefaultDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-}
-
-function updateCategories() {
-    const type = document.getElementById('expenseType').value;
-    const categorySelect = document.getElementById('category');
-    categorySelect.innerHTML = CATEGORIES[type]
-        .map(cat => `<option value="${cat}">${cat}</option>`)
-        .join('');
-}
-
-// ייצוא פונקציות
+// ייצוא פונקציות גלובליות
 window.deleteExpense = deleteExpense;
 window.exportToPDF = exportToPDF;
 window.exportToExcel = exportToExcel;
 window.shareData = shareData;
-window.onSignIn = onSignIn;
-window.signOut = signOut;

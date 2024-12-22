@@ -9,6 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-gray-100">
     <!-- סרגל עליון -->
@@ -19,49 +22,61 @@
                     <span class="font-bold mr-1" id="userName">משתמש</span>
                 </div>
                 <div class="flex items-center gap-4">
+                    <select id="languageSelect" class="px-4 py-2 border rounded">
+                        <option value="he">עברית</option>
+                        <option value="en">English</option>
+                    </select>
                     <button id="settingsBtn" class="px-4 py-2 text-gray-600 hover:text-gray-800">
                         הגדרות
                     </button>
+                    <div id="authButtons" class="flex gap-2">
+                        <button id="googleAuthBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                            Google התחבר עם
+                        </button>
+                        <button id="emailAuthBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            התחבר עם אימייל
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="container mx-auto p-4">
-        <h1 class="text-3xl font-bold text-center mb-8">ניהול תקציב משפחתי</h1>
+        <h1 class="text-3xl font-bold text-center mb-8" data-translate="title">ניהול תקציב משפחתי</h1>
        
         <!-- הוספת הוצאה -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-xl font-bold mb-4">הוספת הוצאה</h2>
+            <h2 class="text-xl font-bold mb-4" data-translate="addExpense">הוספת הוצאה</h2>
             <form id="expenseForm" class="space-y-4">
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block mb-2">סוג הוצאה</label>
+                        <label class="block mb-2" data-translate="expenseType">סוג הוצאה</label>
                         <select id="expenseType" class="w-full p-2 border rounded">
-                            <option value="הוצאות קבועות">הוצאות קבועות</option>
-                            <option value="הוצאות משתנות">הוצאות משתנות</option>
+                            <option value="הוצאות קבועות" data-translate="fixedExpenses">הוצאות קבועות</option>
+                            <option value="הוצאות משתנות" data-translate="variableExpenses">הוצאות משתנות</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block mb-2">קטגוריה</label>
+                        <label class="block mb-2" data-translate="category">קטגוריה</label>
                         <select id="category" class="w-full p-2 border rounded"></select>
                     </div>
                 </div>
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block mb-2">סכום</label>
+                        <label class="block mb-2" data-translate="amount">סכום</label>
                         <input type="number" id="amount" class="w-full p-2 border rounded" required>
                     </div>
                     <div>
-                        <label class="block mb-2">תאריך</label>
+                        <label class="block mb-2" data-translate="date">תאריך</label>
                         <input type="date" id="date" class="w-full p-2 border rounded" required>
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2">תיאור</label>
+                    <label class="block mb-2" data-translate="description">תיאור</label>
                     <input type="text" id="description" class="w-full p-2 border rounded">
                 </div>
-                <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600" data-translate="addButton">
                     הוסף הוצאה
                 </button>
             </form>
@@ -70,7 +85,7 @@
         <!-- תקציב חודשי -->
         <div class="grid md:grid-cols-2 gap-4 mb-6">
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-4">תקציב הוצאות קבועות</h2>
+                <h2 class="text-xl font-bold mb-4" data-translate="fixedBudget">תקציב הוצאות קבועות</h2>
                 <input
                     type="number"
                     id="fixedBudget"
@@ -79,7 +94,7 @@
                 >
             </div>
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-4">תקציב הוצאות משתנות</h2>
+                <h2 class="text-xl font-bold mb-4" data-translate="variableBudget">תקציב הוצאות משתנות</h2>
                 <input
                     type="number"
                     id="variableBudget"
@@ -92,18 +107,18 @@
         <!-- סיכומים -->
         <div class="grid md:grid-cols-2 gap-6 mb-6">
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-4">סיכומי הוצאות</h2>
+                <h2 class="text-xl font-bold mb-4" data-translate="expenseSummary">סיכומי הוצאות</h2>
                 <div class="space-y-4">
                     <select id="summaryType" class="w-full p-2 border rounded mb-4">
-                        <option value="daily">סיכום יומי</option>
-                        <option value="weekly">סיכום שבועי</option>
-                        <option value="monthly">סיכום חודשי</option>
+                        <option value="daily" data-translate="daily">סיכום יומי</option>
+                        <option value="weekly" data-translate="weekly">סיכום שבועי</option>
+                        <option value="monthly" data-translate="monthly">סיכום חודשי</option>
                     </select>
                     <div id="summaryStats"></div>
                 </div>
             </div>
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-4">התפלגות הוצאות</h2>
+                <h2 class="text-xl font-bold mb-4" data-translate="expenseDistribution">התפלגות הוצאות</h2>
                 <canvas id="expenseChart"></canvas>
             </div>
         </div>
@@ -111,12 +126,12 @@
         <!-- טבלת הוצאות -->
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">רשימת הוצאות</h2>
+                <h2 class="text-xl font-bold" data-translate="expenseList">רשימת הוצאות</h2>
                 <div class="space-x-2">
-                    <button onclick="exportToPDF()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    <button onclick="exportToPDF()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" data-translate="exportPDF">
                         ייצוא ל-PDF
                     </button>
-                    <button onclick="exportToExcel()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    <button onclick="exportToExcel()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600" data-translate="exportExcel">
                         ייצוא לאקסל
                     </button>
                 </div>
@@ -125,11 +140,11 @@
                 <table class="w-full">
                     <thead>
                         <tr class="bg-gray-50">
-                            <th class="p-2 text-right">תאריך</th>
-                            <th class="p-2 text-right">סוג</th>
-                            <th class="p-2 text-right">קטגוריה</th>
-                            <th class="p-2 text-right">סכום</th>
-                            <th class="p-2 text-right">תיאור</th>
+                            <th class="p-2 text-right" data-translate="date">תאריך</th>
+                            <th class="p-2 text-right" data-translate="type">סוג</th>
+                            <th class="p-2 text-right" data-translate="category">קטגוריה</th>
+                            <th class="p-2 text-right" data-translate="amount">סכום</th>
+                            <th class="p-2 text-right" data-translate="description">תיאור</th>
                             <th class="p-2"></th>
                         </tr>
                     </thead>
@@ -142,32 +157,40 @@
     <!-- חלון הגדרות -->
     <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">הגדרות</h2>
+            <h2 class="text-xl font-bold mb-4" data-translate="settings">הגדרות</h2>
             <form id="settingsForm" class="space-y-4">
                 <div>
-                    <label class="block mb-1">שם משתמש</label>
+                    <label class="block mb-1" data-translate="username">שם משתמש</label>
                     <input type="text" id="settingsName" class="w-full p-2 border rounded">
                 </div>
                 <div>
-                    <label class="block mb-1">צבע נושא</label>
+                    <label class="block mb-1" data-translate="theme">צבע נושא</label>
                     <select id="settingsTheme" class="w-full p-2 border rounded">
-                        <option value="light">בהיר</option>
-                        <option value="dark">כהה</option>
+                        <option value="light" data-translate="light">בהיר</option>
+                        <option value="dark" data-translate="dark">כהה</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block mb-1">תצוגת ברירת מחדל</label>
+                    <label class="block mb-1" data-translate="fontSize">גודל טקסט</label>
+                    <select id="settingsFontSize" class="w-full p-2 border rounded">
+                        <option value="small" data-translate="small">קטן</option>
+                        <option value="medium" data-translate="medium">בינוני</option>
+                        <option value="large" data-translate="large">גדול</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-1" data-translate="defaultView">תצוגת ברירת מחדל</label>
                     <select id="defaultView" class="w-full p-2 border rounded">
-                        <option value="daily">יומי</option>
-                        <option value="weekly">שבועי</option>
-                        <option value="monthly">חודשי</option>
+                        <option value="daily" data-translate="daily">יומי</option>
+                        <option value="weekly" data-translate="weekly">שבועי</option>
+                        <option value="monthly" data-translate="monthly">חודשי</option>
                     </select>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button type="button" id="closeSettings" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    <button type="button" id="closeSettings" class="px-4 py-2 text-gray-600 hover:text-gray-800" data-translate="cancel">
                         ביטול
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-translate="save">
                         שמור
                     </button>
                 </div>
@@ -179,6 +202,7 @@
 </body>
 </html>
 <style>
+    /* סגנונות קיימים */
     body.dark-theme {
         background-color: #1a1a1a;
         color: #ffffff;
@@ -209,5 +233,44 @@
    
     body.dark-theme .text-gray-600 {
         color: #d1d1d1;
+    }
+
+    /* סגנונות חדשים */
+    .font-size-small {
+        font-size: 14px;
+    }
+
+    .font-size-medium {
+        font-size: 16px;
+    }
+
+    .font-size-large {
+        font-size: 18px;
+    }
+
+    /* סגנון קלאסי */
+    .classic-theme {
+        --primary-color: #2c3e50;
+        --secondary-color: #34495e;
+        --accent-color: #3498db;
+    }
+
+    .classic-theme button {
+        transition: all 0.3s ease;
+    }
+
+    .classic-theme button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* אנימציות */
+    .fade-in {
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 </style>

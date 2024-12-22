@@ -281,51 +281,54 @@
         </div>
     </div>
 
-    <!-- מודל הגדרות -->
-    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <h2 class="text-2xl font-bold mb-6">הגדרות</h2>
-            <form id="settingsForm" class="space-y-4">
-                <div>
-                    <label class="block mb-1">ערכת נושא</label>
-                    <select id="settingsTheme" class="w-full p-2 border rounded">
-                        <option value="light">בהיר</option>
-                        <option value="dark">כהה</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block mb-1">גודל טקסט</label>
-                    <select id="settingsFontSize" class="w-full p-2 border rounded">
-                        <option value="small">קטן</option>
-                        <option value="medium">בינוני</option>
-                        <option value="large">גדול</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block mb-1">התראות</label>
-                    <div class="space-y-2">
-                        <label class="flex items-center">
-                            <input type="checkbox" id="settingsNotifyExpenses" class="ml-2">
-                            התראות על הוצאות חריגות
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" id="settingsNotifyGoals" class="ml-2">
-                            התראות על מטרות חיסכון
-                        </label>
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-4 space-x-reverse">
-                    <button type="button" id="closeSettings" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                        ביטול
-                    </button>
-                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                        שמור
-                    </button>
-                </div>
-            </form>
+ <!-- מודל הגדרות -->
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="bg-white rounded-lg p-8 max-w-md w-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">הגדרות</h2>
+            <button id="closeSettings" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         </div>
+        <form id="settingsForm" class="space-y-4">
+            <div>
+                <label class="block mb-1">ערכת נושא</label>
+                <select id="settingsTheme" class="w-full p-2 border rounded">
+                    <option value="light">בהיר</option>
+                    <option value="dark">כהה</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-1">גודל טקסט</label>
+                <select id="settingsFontSize" class="w-full p-2 border rounded">
+                    <option value="small">קטן</option>
+                    <option value="medium">בינוני</option>
+                    <option value="large">גדול</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-1">התראות</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="settingsNotifyExpenses" class="ml-2">
+                        התראות על הוצאות חריגות
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="settingsNotifyGoals" class="ml-2">
+                        התראות על מטרות חיסכון
+                    </label>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 space-x-reverse">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    שמור
+                </button>
+            </div>
+        </form>
     </div>
-
+</div>
     <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {

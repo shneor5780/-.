@@ -1,11 +1,11 @@
-// הגדרות Firebase
+// Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDR1KoguXCz03N349zJCcwQYqeXtd-zYQs",
-    authDomain: "expense-tracker-5780.firebaseapp.com",
-    projectId: "expense-tracker-5780",
-    storageBucket: "expense-tracker-5780.appspot.com",
-    messagingSenderId: "258898773966",
-    appId: "1:258898773966:web:6c58d5c0e7c9f3c3d3d3d3"
+  apiKey: "AIzaSyBWi-H1IrHpy9kgVDTUCqRqkcy3K44QVhc",
+  authDomain: "expense-tracker-d4247.firebaseapp.com",
+  projectId: "expense-tracker-d4247",
+  storageBucket: "expense-tracker-d4247.appspot.com",
+  messagingSenderId: "368393545158",
+  appId: "1:368393545158:web:c9292c0107f1d894c1ae3f"
 };
 
 // אתחול Firebase

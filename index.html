@@ -10,8 +10,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link href="styles.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100 font-size-medium">
+<body class="bg-gray-100">
     <!-- סרגל עליון -->
     <div class="bg-white shadow">
         <div class="container mx-auto px-4">
@@ -20,7 +21,7 @@
                     <span class="font-bold mr-1" id="userName">משתמש</span>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button id="settingsBtn" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    <button id="settingsBtn" class="text-gray-600 hover:text-gray-800">
                         <i class="fas fa-cog text-xl"></i>
                     </button>
                 </div>
@@ -33,44 +34,45 @@
         
         <!-- כרטיסי מידע -->
         <div class="grid md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="info-card bg-white rounded-lg shadow p-6">
                 <h3 class="font-bold mb-2">סך הכנסות</h3>
                 <p id="totalIncome" class="text-2xl text-green-500">₪0</p>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="info-card bg-white rounded-lg shadow p-6">
                 <h3 class="font-bold mb-2">סך הוצאות</h3>
                 <p id="totalExpenses" class="text-2xl text-red-500">₪0</p>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="info-card bg-white rounded-lg shadow p-6">
                 <h3 class="font-bold mb-2">יתרה</h3>
                 <p id="balance" class="text-2xl">₪0</p>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="info-card bg-white rounded-lg shadow p-6">
                 <h3 class="font-bold mb-2">חיסכון חודשי</h3>
                 <p id="monthlySavings" class="text-2xl text-blue-500">₪0</p>
             </div>
         </div>
 
-        <!-- טאבים להוספת הכנסה/הוצאה -->
+        <!-- טאבים -->
         <div class="bg-white rounded-lg shadow mb-6">
             <div class="border-b">
-                <div class="flex">
-                    <button id="incomeTab" class="px-6 py-3 font-medium border-b-2 border-transparent hover:border-blue-500">
+                <nav class="flex" aria-label="Tabs">
+                    <button id="incomeTab" class="tab-button px-6 py-3 text-blue-600 border-b-2 border-blue-600 font-medium">
                         הכנסה
                     </button>
-                    <button id="expenseTab" class="px-6 py-3 font-medium border-b-2 border-blue-500">
+                    <button id="expenseTab" class="tab-button px-6 py-3 text-gray-500 hover:text-gray-700 font-medium">
                         הוצאה
                     </button>
-                </div>
+                </nav>
             </div>
-            
+
             <!-- טופס הכנסה -->
-            <div id="incomeForm" class="hidden p-6">
+            <div id="incomeForm" class="form-container p-6">
                 <form id="addIncomeForm" class="space-y-4">
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="block mb-2">קטגוריה</label>
-                            <select id="incomeCategory" class="w-full p-2 border rounded">
+                            <select id="incomeCategory" name="category" class="w-full p-2 border rounded" required>
+                                <option value="">בחר קטגוריה</option>
                                 <option value="משכורת">משכורת</option>
                                 <option value="עסק">הכנסה מעסק</option>
                                 <option value="השקעות">השקעות</option>
@@ -79,39 +81,40 @@
                         </div>
                         <div>
                             <label class="block mb-2">סכום</label>
-                            <input type="number" id="incomeAmount" class="w-full p-2 border rounded" required>
+                            <input type="number" id="incomeAmount" name="amount" class="w-full p-2 border rounded" required>
                         </div>
                     </div>
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="block mb-2">תאריך</label>
-                            <input type="date" id="incomeDate" class="w-full p-2 border rounded" required>
+                            <input type="date" id="incomeDate" name="date" class="w-full p-2 border rounded" required>
                         </div>
                         <div>
                             <label class="block mb-2">תיאור</label>
-                            <input type="text" id="incomeDescription" class="w-full p-2 border rounded">
+                            <input type="text" id="incomeDescription" name="description" class="w-full p-2 border rounded">
                         </div>
                     </div>
-                    <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
+                    <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 w-full md:w-auto">
                         הוסף הכנסה
                     </button>
                 </form>
             </div>
 
             <!-- טופס הוצאה -->
-            <div id="expenseForm" class="p-6">
+            <div id="expenseForm" class="form-container p-6 hidden">
                 <form id="addExpenseForm" class="space-y-4">
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="block mb-2">סוג הוצאה</label>
-                            <select id="expenseType" class="w-full p-2 border rounded">
+                            <select id="expenseType" name="type" class="w-full p-2 border rounded" required>
                                 <option value="קבועות">הוצאות קבועות</option>
                                 <option value="משתנות">הוצאות משתנות</option>
                             </select>
                         </div>
                         <div>
                             <label class="block mb-2">קטגוריה</label>
-                            <select id="expenseCategory" class="w-full p-2 border rounded">
+                            <select id="expenseCategory" name="category" class="w-full p-2 border rounded" required>
+                                <option value="">בחר קטגוריה</option>
                                 <option value="דיור">דיור</option>
                                 <option value="מזון">מזון</option>
                                 <option value="תחבורה">תחבורה</option>
@@ -126,18 +129,18 @@
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="block mb-2">סכום</label>
-                            <input type="number" id="expenseAmount" class="w-full p-2 border rounded" required>
+                            <input type="number" id="expenseAmount" name="amount" class="w-full p-2 border rounded" required>
                         </div>
                         <div>
                             <label class="block mb-2">תאריך</label>
-                            <input type="date" id="expenseDate" class="w-full p-2 border rounded" required>
+                            <input type="date" id="expenseDate" name="date" class="w-full p-2 border rounded" required>
                         </div>
                     </div>
                     <div>
                         <label class="block mb-2">תיאור</label>
-                        <input type="text" id="expenseDescription" class="w-full p-2 border rounded">
+                        <input type="text" id="expenseDescription" name="description" class="w-full p-2 border rounded">
                     </div>
-                    <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600">
+                    <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 w-full md:w-auto">
                         הוסף הוצאה
                     </button>
                 </form>
@@ -152,7 +155,7 @@
                     <select id="summaryPeriod" class="w-full p-2 border rounded mb-4">
                         <option value="daily">יומי</option>
                         <option value="weekly">שבועי</option>
-                        <option value="monthly">חודשי</option>
+                        <option value="monthly" selected>חודשי</option>
                         <option value="yearly">שנתי</option>
                     </select>
                     <div id="summaryStats" class="space-y-2"></div>
@@ -197,7 +200,7 @@
 
     <!-- חלון הגדרות -->
     <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full" id="settingsContent">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">הגדרות</h2>
                 <button id="closeSettings" class="text-gray-500 hover:text-gray-700">
@@ -238,16 +241,7 @@
                         <option value="horizontal">אופקי</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block mb-1">תצוגת ברירת מחדל</label>
-                    <select id="settingsDefaultView" class="w-full p-2 border rounded">
-                        <option value="daily">יומי</option>
-                        <option value="weekly">שבועי</option>
-                        <option value="monthly">חודשי</option>
-                        <option value="yearly">שנתי</option>
-                    </select>
-                </div>
-                <button type="submit" class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                <button type="submit" class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                     שמור הגדרות
                 </button>
             </form>

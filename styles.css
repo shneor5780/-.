@@ -111,18 +111,20 @@ body.dark-theme td {
 input, select, textarea {
     width: 100%;
     padding: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     border: 1px solid var(--light-border);
     border-radius: 0.25rem;
     transition: all 0.3s ease;
 }
 
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
 /* כפתורים */
 button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 0.25rem;
-    cursor: pointer;
     transition: all 0.3s ease;
 }
 
@@ -132,35 +134,34 @@ button:hover {
 
 /* כרטיסי מידע */
 .info-card {
-    background-color: var(--light-bg);
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
 }
 
-body.dark-theme .info-card {
-    background-color: #2d2d2d;
+.info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* טאבים */
-.tab {
-    padding: 0.75rem 1.5rem;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
+.tab-button {
+    position: relative;
     transition: all 0.3s ease;
 }
 
-.tab.active {
-    border-bottom-color: var(--primary-color);
-    font-weight: bold;
+.tab-button::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
 }
 
-/* תרשימים */
-.chart-container {
-    position: relative;
-    height: 300px;
-    margin: 1rem 0;
+.tab-button.active::after {
+    transform: scaleX(1);
 }
 
 /* אנימציות */
@@ -169,50 +170,13 @@ body.dark-theme .info-card {
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-/* התאמה למסך קטן */
-@media (max-width: 768px) {
-    .container {
-        padding: 1rem;
-    }
-    
-    .grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .info-card {
-        margin-bottom: 1rem;
-    }
-    
-    #settingsModal .modal-content {
-        width: 95%;
-        margin: 1rem;
-    }
-}
-
-/* סגנונות נוספים */
-.text-success {
-    color: var(--success-color);
-}
-
-.text-error {
-    color: var(--error-color);
-}
-
-.text-warning {
-    color: var(--warning-color);
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* חלון הגדרות */
 #settingsModal {
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease;
 }
 
 #settingsModal .modal-content {
@@ -224,19 +188,69 @@ body.dark-theme .info-card {
     transform: scale(1);
 }
 
-/* התאמות נוספות למצב כהה */
-body.dark-theme .modal-content {
-    background-color: #2d2d2d;
+/* התאמות למובייל */
+@media (max-width: 768px) {
+    .container {
+        padding: 0.5rem;
+    }
+
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .info-card {
+        margin-bottom: 0.5rem;
+    }
+
+    .tab-button {
+        padding: 0.75rem 1rem;
+    }
+
+    .form-container {
+        padding: 1rem;
+    }
+
+    .buttons-container {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    button {
+        width: 100%;
+    }
+
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    
+    .mb-8 { margin-bottom: 1rem; }
+    .p-6 { padding: 1rem; }
+
+    #settingsModal .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+
+    table {
+        font-size: 0.875rem;
+    }
+
+    td, th {
+        padding: 0.5rem;
+    }
 }
 
-body.dark-theme .text-gray-600 {
-    color: #d1d1d1;
+/* נוספים */
+.text-success { color: var(--success-color); }
+.text-error { color: var(--error-color); }
+.text-warning { color: var(--warning-color); }
+
+/* טיפול במעברים חלקים */
+.transition-all {
+    transition: all 0.3s ease;
 }
 
-body.dark-theme .bg-gray-100 {
-    background-color: #1a1a1a;
-}
-
-body.dark-theme canvas {
-    filter: invert(1) hue-rotate(180deg);
+/* עיצוב גרף */
+canvas {
+    width: 100% !important;
+    max-height: 300px;
 }

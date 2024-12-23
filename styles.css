@@ -26,56 +26,67 @@ body {
     font-family: 'Rubik', sans-serif;
     line-height: 1.6;
     direction: rtl;
+    transition: all 0.3s ease;
+}
+
+/* גדלי גופן */
+body.font-size-small {
+    font-size: 14px;
+}
+
+body.font-size-medium {
+    font-size: 16px;
+}
+
+body.font-size-large {
+    font-size: 18px;
 }
 
 /* ערכות נושא */
-.light-theme {
+body.light-theme {
     background-color: var(--light-bg);
     color: var(--light-text);
 }
 
-.dark-theme {
+body.dark-theme {
     background-color: var(--dark-bg);
     color: var(--dark-text);
 }
 
-/* גדלי טקסט */
-.font-size-small {
-    font-size: 0.875rem;
+body.dark-theme .bg-white {
+    background-color: #2d2d2d;
 }
 
-.font-size-medium {
-    font-size: 1rem;
+body.dark-theme .bg-gray-50 {
+    background-color: #3d3d3d;
 }
 
-.font-size-large {
-    font-size: 1.125rem;
+body.dark-theme .border {
+    border-color: var(--dark-border);
 }
 
-/* מודלים */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+body.dark-theme input,
+body.dark-theme select,
+body.dark-theme textarea {
+    background-color: #404040;
+    color: var(--dark-text);
+    border-color: var(--dark-border);
 }
 
-.modal-content {
-    background-color: var(--light-bg);
-    padding: 2rem;
-    border-radius: 0.5rem;
-    max-width: 500px;
-    width: 90%;
+body.dark-theme .shadow {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
-.dark-theme .modal-content {
-    background-color: var(--dark-bg);
+/* כיווני גלילה לטבלה */
+#tableWrapper.scroll-vertical {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#tableWrapper.scroll-horizontal {
+    max-height: none;
+    overflow-x: auto;
+    white-space: nowrap;
 }
 
 /* טבלאות */
@@ -91,8 +102,8 @@ th, td {
     border: 1px solid var(--light-border);
 }
 
-.dark-theme th,
-.dark-theme td {
+body.dark-theme th,
+body.dark-theme td {
     border-color: var(--dark-border);
 }
 
@@ -103,14 +114,7 @@ input, select, textarea {
     margin-bottom: 1rem;
     border: 1px solid var(--light-border);
     border-radius: 0.25rem;
-}
-
-.dark-theme input,
-.dark-theme select,
-.dark-theme textarea {
-    background-color: #2d2d2d;
-    border-color: var(--dark-border);
-    color: var(--dark-text);
+    transition: all 0.3s ease;
 }
 
 /* כפתורים */
@@ -119,44 +123,120 @@ button {
     border: none;
     border-radius: 0.25rem;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.3s ease;
 }
 
 button:hover {
     opacity: 0.9;
 }
 
-/* התראות */
-.notification {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    padding: 1rem;
+/* כרטיסי מידע */
+.info-card {
+    background-color: var(--light-bg);
+    padding: 1.5rem;
     border-radius: 0.5rem;
-    color: white;
-    z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+body.dark-theme .info-card {
+    background-color: #2d2d2d;
+}
+
+/* טאבים */
+.tab {
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab.active {
+    border-bottom-color: var(--primary-color);
+    font-weight: bold;
 }
 
 /* תרשימים */
 .chart-container {
-    margin: 2rem 0;
-    padding: 1rem;
-    border: 1px solid var(--light-border);
-    border-radius: 0.5rem;
+    position: relative;
+    height: 300px;
+    margin: 1rem 0;
 }
 
-.dark-theme .chart-container {
-    border-color: var(--dark-border);
+/* אנימציות */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
 }
 
-/* מצב מסך קטן */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* התאמה למסך קטן */
 @media (max-width: 768px) {
     .container {
         padding: 1rem;
     }
     
-    table {
-        display: block;
-        overflow-x: auto;
+    .grid {
+        grid-template-columns: 1fr;
     }
+    
+    .info-card {
+        margin-bottom: 1rem;
+    }
+    
+    #settingsModal .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+}
+
+/* סגנונות נוספים */
+.text-success {
+    color: var(--success-color);
+}
+
+.text-error {
+    color: var(--error-color);
+}
+
+.text-warning {
+    color: var(--warning-color);
+}
+
+/* חלון הגדרות */
+#settingsModal {
+    transition: all 0.3s ease;
+}
+
+#settingsModal .modal-content {
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+#settingsModal.show .modal-content {
+    transform: scale(1);
+}
+
+/* התאמות נוספות למצב כהה */
+body.dark-theme .modal-content {
+    background-color: #2d2d2d;
+}
+
+body.dark-theme .text-gray-600 {
+    color: #d1d1d1;
+}
+
+body.dark-theme .bg-gray-100 {
+    background-color: #1a1a1a;
+}
+
+body.dark-theme canvas {
+    filter: invert(1) hue-rotate(180deg);
 }
